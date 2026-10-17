@@ -1,0 +1,27 @@
+name: Turnier
+version: ${version}
+main: de.turnier.TurnierPlugin
+api-version: '26.3'
+description: BedWars-Turnierverwaltung (Teams, Punkte, Runden, Scoreboard)
+authors: [Jawollo07]
+softdepend: [MBedwars]
+
+commands:
+  turnier:
+    description: Turnierverwaltung
+    usage: /turnier
+  bwturnier:
+    description: Turnierablauf (Start, Runden, Ende, Wertung)
+    usage: /bwturnier <start|round|roundend|finish|announce|stats|win|on|off|status>
+    permission: turnier.admin
+    permission-message: "&cKeine Berechtigung."
+  turnierboard:
+    description: Turnier-Scoreboard global an/aus
+    usage: /turnierboard <on|off|status>
+    permission: turnier.admin
+    permission-message: "&cKeine Berechtigung."
+
+permissions:
+  turnier.admin:
+    description: Zugriff auf alle Turnierbefehle
+    default: op

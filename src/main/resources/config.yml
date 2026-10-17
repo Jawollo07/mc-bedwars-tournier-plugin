@@ -1,0 +1,18 @@
+# Präfix vor allen Nachrichten (Farbcodes mit &)
+prefix: "&8[&6Turnier&8] &7"
+
+scoreboard:
+  title: "&6&lBEDWARS"
+  # Aktualisierungsintervall in Ticks (20 Ticks = 1 Sekunde)
+  refresh-ticks: 40
+
+# Punkte für die (optionale) automatische Wertung über die Plugin-API
+points:
+  kill: 1
+  bed: 5
+  win: 10
+
+# Anbindung an MBedwars (Kills, Bettzerstörungen und Rundensiege automatisch werten)
+# Gewertet wird nur, wenn: Turnier gestartet, Runde läuft und /bwturnier on aktiv ist.
+mbedwars:
+  enabled: true
