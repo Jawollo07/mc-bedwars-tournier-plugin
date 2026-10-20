@@ -179,8 +179,7 @@ public final class TournamentManager {
 
     /** Adds points without allowing integer overflow to wrap the leaderboard. */
     public static int saturatedAdd(int current, int amount) {
-        long result = (long) current + amount;
-        return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, result));
+        return PointScoring.saturatedAdd(current, amount);
     }
 
     private int configuredPoints(String path, int fallback) {
