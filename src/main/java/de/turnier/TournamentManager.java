@@ -174,7 +174,7 @@ public final class TournamentManager {
     }
 
     private static boolean validTeamName(String name) {
-        return name != null && name.matches("[\p{L}\p{N}_-]{1,32}");
+        return name != null && name.matches("[\\p{L}\\p{N}_-]{1,32}");
     }
 
     /** Adds points without allowing integer overflow to wrap the leaderboard. */
