@@ -233,7 +233,7 @@ public final class TurnierCommand implements TabExecutor {
 
     private static int apply(String op, int current, int pts) {
         return switch (op) {
-            case "add" -> current + pts;
+            case "add" -> TournamentManager.saturatedAdd(current, pts);
             case "remove" -> Math.max(0, current - pts);
             default -> pts;
         };
