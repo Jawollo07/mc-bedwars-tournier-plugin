@@ -12,9 +12,10 @@ repositories {
 
 dependencies {
     // Falls die Auflösung scheitert: feste Version nutzen, z. B. 26.3.build.143-beta
-    compileOnly("io.papermc.paper:paper-api:26.3.build.+")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.143-beta")
     // MBedwars-API (nur zum Kompilieren, wird auf dem Server vom MBedwars-Plugin gestellt)
     compileOnly(files("libs/MBedwars-5_5_9_1.jar"))
+    testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
 }
 
 java {
@@ -25,6 +26,9 @@ tasks {
     compileJava {
         options.encoding = "UTF-8"
         options.release.set(25)
+    }
+    test {
+        useJUnitPlatform()
     }
     processResources {
         filesMatching("plugin.yml") {

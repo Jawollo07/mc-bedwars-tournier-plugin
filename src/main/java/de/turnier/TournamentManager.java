@@ -6,6 +6,9 @@ import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -16,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
+import org.bukkit.scheduler.BukkitTask;
 
 /** Hält alle Turnierdaten und speichert sie in plugins/Turnier/data.yml. */
 public final class TournamentManager {
@@ -56,6 +60,7 @@ public final class TournamentManager {
     private boolean boardEnabled = true;
     private int round;
     private String champion;
+    private BukkitTask pendingSave;
 
     public TournamentManager(TurnierPlugin plugin) {
         this.plugin = plugin;
@@ -88,7 +93,7 @@ public final class TournamentManager {
     }
 
     public TeamData createTeam(String name) {
-        if (teams.containsKey(key(name))) return null;
+        if (!validTeamName(name) || teams.containsKey(key(name))) return null;
         TeamData t = new TeamData(name);
         teams.put(key(name), t);
         return t;
@@ -103,6 +108,7 @@ public final class TournamentManager {
 
     /** @return false, wenn der neue Name schon belegt ist */
     public boolean renameTeam(TeamData t, String newName) {
+        if (t == null || !validTeamName(newName)) return false;
         TeamData other = findTeam(newName);
         if (other != null && other != t) return false;
         String oldName = t.name;
@@ -167,6 +173,33 @@ public final class TournamentManager {
         for (TeamData t : teams.values()) t.points = 0;
     }
 
+    private static boolean validTeamName(String name) {
+        return name != null && name.matches("[\\p{L}\\p{N}_-]{1,32}");
+    }
+
+    /** Adds points without allowing integer overflow to wrap the leaderboard. */
+    public static int saturatedAdd(int current, int amount) {
+        long result = (long) current + amount;
+        return (int) Math.max(0L, Math.min(Integer.MAX_VALUE, result));
+    }
+
+    private int configuredPoints(String path, int fallback) {
+        int value = plugin.getConfig().getInt(path, fallback);
+        if (value < 0) {
+            plugin.getLogger().warning("Negative point value in config at '" + path + "'; using 0.");
+            return 0;
+        }
+        return value;
+    }
+
+    private void scheduleSave() {
+        if (pendingSave != null) return;
+        pendingSave = plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            pendingSave = null;
+            save();
+        }, 40L);
+    }
+
     // ------------------------------------------- API für automatische Wertung
 
     public boolean scoringOpen() {
@@ -175,36 +208,43 @@ public final class TournamentManager {
 
     /** Für spätere Anbindung an ein BedWars-Plugin: Kill gutschreiben. */
     public void awardKill(Player killer) {
-        award(killer, plugin.getConfig().getInt("points.kill", 1), true);
+        award(killer, configuredPoints("points.kill", 1), true);
     }
 
     /** Für spätere Anbindung an ein BedWars-Plugin: Bettzerstörung gutschreiben. */
     public void awardBed(Player breaker) {
-        award(breaker, plugin.getConfig().getInt("points.bed", 5), false);
+        award(breaker, configuredPoints("points.bed", 5), false);
     }
 
     /** Rundensieg: jedes Turnierteam mit mindestens einem Gewinner bekommt einmal die Sieg-Punkte. */
     public void awardWin(Collection<Player> winners) {
-        if (!scoringOpen()) return;
-        int pts = plugin.getConfig().getInt("points.win", 10);
+        if (!scoringOpen() || winners == null || winners.isEmpty()) return;
+        int pts = configuredPoints("points.win", 10);
         java.util.Set<TeamData> winningTeams = new java.util.LinkedHashSet<>();
         for (Player p : winners) {
+            if (p == null) continue;
             TeamData t = findTeam(register(p).team);
             if (t != null) winningTeams.add(t);
         }
         for (TeamData t : winningTeams) {
-            t.points += pts;
-            t.wins++;
+            t.points = saturatedAdd(t.points, pts);
+            if (t.wins < Integer.MAX_VALUE) t.wins++;
         }
+        if (!winningTeams.isEmpty()) scheduleSave();
     }
 
     private void award(Player p, int pts, boolean kill) {
-        if (!scoringOpen()) return;
+        if (!scoringOpen() || p == null) return;
         PlayerData d = register(p);
-        d.points += pts;
-        if (kill) d.kills++; else d.beds++;
+        d.points = saturatedAdd(d.points, pts);
+        if (kill) {
+            if (d.kills < Integer.MAX_VALUE) d.kills++;
+        } else if (d.beds < Integer.MAX_VALUE) {
+            d.beds++;
+        }
         TeamData t = findTeam(d.team);
-        if (t != null) t.points += pts;
+        if (t != null) t.points = saturatedAdd(t.points, pts);
+        scheduleSave();
     }
 
     // ------------------------------------------------------------ Speicherung
@@ -213,8 +253,10 @@ public final class TournamentManager {
         if (!file.exists()) return;
         YamlConfiguration y = YamlConfiguration.loadConfiguration(file);
 
-        active = y.getBoolean("state.active", false);
-        roundActive = y.getBoolean("state.round-active", false);
+        // A process restart cannot safely resume a live BedWars round. Preserve standings,
+        // but require an administrator to start the tournament and round again.
+        active = false;
+        roundActive = false;
         autoScoring = y.getBoolean("state.auto-scoring", true);
         boardEnabled = y.getBoolean("state.board-enabled", true);
         round = y.getInt("state.round", 0);
@@ -280,11 +322,30 @@ public final class TournamentManager {
             y.set(base + ".beds", p.beds);
         }
 
+        if (pendingSave != null) {
+            pendingSave.cancel();
+            pendingSave = null;
+        }
+        File temporary = new File(file.getParentFile(), file.getName() + ".tmp");
         try {
-            plugin.getDataFolder().mkdirs();
-            y.save(file);
+            if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
+                throw new IOException("Plugin-Datenverzeichnis konnte nicht erstellt werden");
+            }
+            y.save(temporary);
+            try {
+                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
-            plugin.getLogger().log(Level.SEVERE, "data.yml konnte nicht gespeichert werden", e);
+            plugin.getLogger().log(Level.SEVERE, "data.yml konnte nicht sicher gespeichert werden", e);
+        } finally {
+            try {
+                Files.deleteIfExists(temporary.toPath());
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Temporäre Datendatei konnte nicht entfernt werden", e);
+            }
         }
     }
 

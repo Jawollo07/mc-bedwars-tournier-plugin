@@ -62,7 +62,7 @@ public final class TurnierPlugin extends JavaPlugin {
         try {
             getServer().getPluginManager().registerEvents(new MBedwarsHook(manager), this);
             getLogger().info("MBedwars-Anbindung aktiv.");
-        } catch (Throwable t) {
+        } catch (Exception | LinkageError t) {
             getLogger().warning("MBedwars-Anbindung fehlgeschlagen: " + t);
         }
     }

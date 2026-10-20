@@ -80,8 +80,9 @@ public final class BwTurnierCommand implements TabExecutor {
                 if (a.length < 2) { plugin.msg(s, "&c/bwturnier win <Team>"); return true; }
                 TeamData t = m.findTeam(a[1]);
                 if (t == null) { plugin.msg(s, "&cTeam nicht gefunden."); return true; }
-                t.points += plugin.getConfig().getInt("points.win", 10);
-                t.wins++;
+                int points = Math.max(0, plugin.getConfig().getInt("points.win", 10));
+                t.points = TournamentManager.saturatedAdd(t.points, points);
+                if (t.wins < Integer.MAX_VALUE) t.wins++;
                 plugin.broadcastPrefixed("&aManueller Sieg für Team &e" + t.name + "&a.");
             }
             case "finish" -> finish(s);
