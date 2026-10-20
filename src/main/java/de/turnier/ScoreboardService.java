@@ -23,6 +23,7 @@ public final class ScoreboardService {
     private final TurnierPlugin plugin;
     private final TournamentManager manager;
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
+    private final Map<UUID, Scoreboard> previousBoards = new HashMap<>();
     private BukkitTask task;
 
     public ScoreboardService(TurnierPlugin plugin, TournamentManager manager) {
@@ -39,6 +40,7 @@ public final class ScoreboardService {
         if (task != null) task.cancel();
         for (Player p : Bukkit.getOnlinePlayers()) remove(p);
         boards.clear();
+        previousBoards.clear();
     }
 
     public void refreshAll() {
@@ -46,14 +48,18 @@ public final class ScoreboardService {
     }
 
     public void forget(Player p) {
-        boards.remove(p.getUniqueId());
+        UUID id = p.getUniqueId();
+        boards.remove(id);
+        previousBoards.remove(id);
     }
 
     /** Entfernt das Turnier-Scoreboard und zeigt wieder das Standard-Scoreboard. */
     public void remove(Player p) {
-        Scoreboard board = boards.remove(p.getUniqueId());
+        UUID id = p.getUniqueId();
+        Scoreboard board = boards.remove(id);
+        Scoreboard previous = previousBoards.remove(id);
         if (board != null && p.getScoreboard() == board) {
-            p.setScoreboard(Bukkit.getScoreboardManager().getMainScoreboard());
+            p.setScoreboard(previous != null ? previous : Bukkit.getScoreboardManager().getMainScoreboard());
         }
     }
 
@@ -64,7 +70,10 @@ public final class ScoreboardService {
         }
 
         Scoreboard board = boards.computeIfAbsent(p.getUniqueId(), id -> createBoard());
-        if (p.getScoreboard() != board) p.setScoreboard(board);
+        if (p.getScoreboard() != board) {
+            previousBoards.putIfAbsent(p.getUniqueId(), p.getScoreboard());
+            p.setScoreboard(board);
+        }
 
         Objective obj = board.getObjective(OBJECTIVE);
         if (obj == null) return;
