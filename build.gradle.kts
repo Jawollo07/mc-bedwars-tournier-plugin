@@ -16,6 +16,8 @@ dependencies {
     // MBedwars-API (nur zum Kompilieren, wird auf dem Server vom MBedwars-Plugin gestellt)
     compileOnly(files("libs/MBedwars-5_5_9_1.jar"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
+    // Gradle 9 benötigt den Launcher explizit auf dem Test-Laufzeit-Classpath.
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }
 
 java {
