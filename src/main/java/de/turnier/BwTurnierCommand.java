@@ -83,7 +83,7 @@ public final class BwTurnierCommand implements TabExecutor {
             }
             case "finish", "ceremony", "siegerehrung" -> finish(s);
             default -> {
-                plugin.msg(s, "&6/bwturnier start|round|roundend|finish|announce|stats <Team>|win <Team>|on|off|status");
+                plugin.msg(s, "&6/bwturnier start [Runden]|next|pause|ceremony|announce|stats <Team>|win <Team>|on|off|status");
                 return true;
             }
         }
@@ -206,8 +206,16 @@ public final class BwTurnierCommand implements TabExecutor {
         long ties = sorted.stream().filter(t -> t.points == highest).count();
 
         if (ties > 1) {
-            plugin.broadcastPrefixed("&eDas Turnier ist beendet. Es gibt einen Gleichstand bei " + highest + " Punkten.");
-            plugin.broadcastPrefixed("&7Bitte entscheide den Sieger manuell.");
+            m.setChampion(null);
+            TurnierPlugin.broadcastRaw("&8&m---------- &6&lSIEGEREHRUNG &8&m----------");
+            TurnierPlugin.broadcastRaw("&eGleichstand auf Platz 1 mit &6" + highest + " Punkten:");
+            for (TeamData team : sorted) {
+                if (team.points != highest) break;
+                TurnierPlugin.broadcastRaw("&6&lPlatz 1: &e" + team.name);
+            }
+            TurnierPlugin.broadcastRaw("&7Ein eindeutiger Champion kann nicht automatisch festgelegt werden.");
+            TurnierPlugin.broadcastRaw("&8&m---------------------------------------");
+            m.save();
             return;
         }
         m.setChampion(winner.name);
