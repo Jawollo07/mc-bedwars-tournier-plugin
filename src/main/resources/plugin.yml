@@ -22,7 +22,7 @@ commands:
     permission-message: "&cKeine Berechtigung."
   mbwctl:
     description: MBedwars-Arenen über die offizielle API verwalten
-    usage: /mbwctl <status|arenas|arena|start|stop|join|kick|reload>
+    usage: /mbwctl <status|arenas|arena|team|start|stop|join|kick|reload>
     permission: turnier.admin
     permission-message: "&cKeine Berechtigung."
 
