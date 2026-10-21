@@ -197,14 +197,15 @@ public final class TurnierCommand implements TabExecutor {
                 if (arena.getStatus() != ArenaStatus.LOBBY) { plugin.msg(s, "&cArena muss in der Lobby sein."); return; }
                 int added = 0, failed = 0;
                 for (PlayerData data : m.allPlayers()) {
+                    // Nicht zugeordnete registrierte Spieler gehören nicht zur Turnieraufstellung.
+                    if (data.team == null) continue;
                     Player p = Bukkit.getPlayer(data.id);
-                    if (p == null) continue;
+                    if (p == null) { failed++; continue; }
                     TeamData tournamentTeam = m.findTeam(data.team);
                     Team bedwarsTeam = tournamentTeam == null || tournamentTeam.bedwarsTeam == null ? null : Team.getByName(tournamentTeam.bedwarsTeam);
                     if (tournamentTeam == null || bedwarsTeam == null || !arena.isTeamEnabled(bedwarsTeam)) { failed++; continue; }
                     if (BedwarsAPI.getGameAPI().getArenaByPlayer(p) == arena) {
-                        arena.moveToTeamDuringLobby(p, bedwarsTeam);
-                        added++;
+                        if (arena.moveToTeamDuringLobby(p, bedwarsTeam)) added++; else failed++;
                     } else {
                         var issue = arena.addPlayer(p, bedwarsTeam, AddPlayerCause.PLUGIN);
                         if (issue == null) added++; else failed++;
@@ -216,7 +217,12 @@ public final class TurnierCommand implements TabExecutor {
             case "start" -> {
                 if (!m.isActive()) { plugin.msg(s, "&cStarte zuerst das Turnier mit /bwturnier start."); return; }
                 if (arena.getStatus() != ArenaStatus.LOBBY) { plugin.msg(s, "&cArena muss in der Lobby sein."); return; }
-                arena.setStatus(ArenaStatus.RUNNING);
+                try {
+                    arena.setStatus(ArenaStatus.RUNNING);
+                } catch (IllegalStateException ex) {
+                    plugin.msg(s, "&cMBedwars konnte die Runde nicht starten: &f" + ex.getMessage());
+                    return;
+                }
                 if (!m.isRoundActive()) { m.setRound(m.getRound() + 1); m.setRoundActive(true); }
                 plugin.broadcastPrefixed("&6Turnierrunde " + m.getRound() + " &awurde in Arena &e" + arena.getName() + " &agestartet.");
             }
@@ -349,7 +355,7 @@ public final class TurnierCommand implements TabExecutor {
         if (!s.hasPermission(TurnierPlugin.ADMIN_PERMISSION)) return List.of();
 
         if (a.length == 1) {
-            return TurnierPlugin.complete(List.of("team", "spieler", "add", "remove", "set",
+            return TurnierPlugin.complete(List.of("team", "spieler", "arena", "match", "add", "remove", "set",
                     "reset", "resetall", "top", "sudo"), a[0]);
         }
         String first = a[0].toLowerCase(Locale.ROOT);
