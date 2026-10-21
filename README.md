@@ -192,10 +192,12 @@ Die Anbindung verwendet die veröffentlichte MBedwars-API `de.marcely.bedwars:AP
 
 | Ereignis | Wertung |
 |---|---|
-| Spieler eliminiert einen anderen Spieler | Der Killer erhält `points.kill`; das zugeordnete Turnierteam erhält dieselbe Punktzahl |
-| Spieler zerstört ein Bett | Bei spielerverursachter, nicht abgebrochener Bettzerstörung erhält der Spieler `points.bed`; sein Turnierteam erhält dieselbe Punktzahl |
-| MBedwars-Runde endet mit Gewinnern | Das mit dem Siegerteam verknüpfte Turnierteam erhält einmal `points.win` und einen Teamsieg, auch wenn die Gewinner offline sind; ohne Mapping wird anhand der Online-Gewinner zugeordnet |
-| Runde endet unentschieden | Keine automatischen Sieg-Punkte |
+| Spieler eliminiert einen anderen Spieler | `points.kill` (Standard `1`) für Spieler und Turnierteam |
+| Gegnerisches Bett wird zerstört | `points.bed` (Standard `3`) für Angreifer und Turnierteam; pro gegnerischem Bett nur einmal pro Runde |
+| Team wird eliminiert | Bei drei Turnierteams wird das zuerst eliminierte Team als 3. Platz (`3` Punkte), das zweite als 2. Platz (`6` Punkte) gewertet |
+| Runde endet mit Gewinnern | Siegerteam erhält 1. Platz (`10` Punkte) und einen Rundensieg; Teams ohne Bettverlust erhalten `2` Bonuspunkte |
+| Gegner wird nach Bettverlust endgültig eliminiert | `points.bedless-elimination` (Standard `1`) Bonus für den verantwortlichen Spieler und sein Turnierteam, sofern nicht derselbe Spieler das Bett gebrochen hat |
+| Runde endet unentschieden | Keine Platzierungspunkte; Bonus für erhaltene Betten wird trotzdem vergeben |
 
 Die Spielerstatistik speichert Kills und Bettzerstörungen separat. Die persönlichen Punkte und die Teampunkte werden unabhängig voneinander gezählt. Wenn ein Spieler keinem Turnierteam zugeordnet ist, kann er persönliche Punkte und Statistiken sammeln, aber kein Turnierteam erhält seine Punkte.
 
@@ -227,9 +229,14 @@ scoreboard:
 
 # Punkte pro Ereignis bei automatischer Wertung
 points:
+  first: 10
+  second: 6
+  third: 3
   kill: 1
-  bed: 5
-  win: 10
+  bed: 3
+  bedless-elimination: 1
+  bed-survived: 2
+  win: 10 # Legacy-Wert, wird von der neuen Wertung nicht verwendet
 
 # Optionale Integration mit MBedwars
 mbedwars:
@@ -241,9 +248,14 @@ mbedwars:
 | `prefix` | Präfix vor Plugin-Nachrichten | `&8[&6Turnier&8] &7` |
 | `scoreboard.title` | Titel des Sidebar-Scoreboards | `&6&lBEDWARS` |
 | `scoreboard.refresh-ticks` | Intervall zwischen Scoreboard-Aktualisierungen; 20 Ticks entsprechen ungefähr einer Sekunde | `40` |
+| `points.first` | Punkte für den 1. Platz | `10` |
+| `points.second` | Punkte für den 2. Platz | `6` |
+| `points.third` | Punkte für den 3. Platz | `3` |
 | `points.kill` | Punkte für einen gültigen Kill | `1` |
-| `points.bed` | Punkte für eine gültige Bettzerstörung | `5` |
-| `points.win` | Punkte für einen Rundensieg pro Turnierteam mit Gewinnern | `10` |
+| `points.bed` | Punkte für eine Bettzerstörung | `3` |
+| `points.bedless-elimination` | Bonus für die endgültige Eliminierung eines Teams nach Bettverlust | `1` |
+| `points.bed-survived` | Bonus für jedes Turnierteam, dessen Bett die Runde übersteht | `2` |
+| `points.win` | Legacy-Einstellung; die neue Wertung nutzt `points.first` | `10` |
 | `mbedwars.enabled` | Aktiviert/deaktiviert den Versuch, MBedwars anzubinden | `true` |
 
 Negative automatische Punktwerte werden beim Werten auf 0 begrenzt und im Log gemeldet. Nach Änderungen an der Konfiguration empfiehlt sich ein Serverneustart, damit alle Einstellungen sicher neu geladen werden.
@@ -351,9 +363,9 @@ Die Team- und Spielerpunktstände werden gespeichert, die laufende Runde jedoch 
 ## Technische Hinweise und Grenzen
 
 - Turnierteams sind eine eigene Ebene und werden nicht automatisch aus MBedwars-Teams importiert oder synchronisiert.
-- Der Rundensieg wird pro Turnierteam nur einmal gezählt, auch wenn mehrere Mitglieder dieses Teams als Gewinner gemeldet werden.
+- Der Rundensieg wird pro Turnierteam nur einmal gezählt, auch wenn mehrere Mitglieder dieses Teams als Gewinner gemeldet werden. Bei drei Teams zählt die Eliminierungsreihenfolge für Platz 2 und 3; diese Zuordnung setzt voraus, dass alle Turnierteams korrekt mit MBedwars-Farbteams verknüpft sind.
 - Bei Gleichstand in MBedwars werden keine automatischen Sieg-Punkte vergeben.
-- Beim Turnierende zählt der gespeicherte **Teampunktestand**. Bei Gleichstand wird kein Champion gespeichert.
+- Beim Turnierende zählt der gespeicherte **Teampunktestand**. Bei Punktgleichstand entscheiden zuerst Rundensiege, danach zerstörte gegnerische Betten. Bei weiterhin bestehendem Gleichstand wird kein eindeutiger Champion gespeichert.
 - `/bwturnier win <Team>` ist eine manuelle Wertung und addiert die konfigurierte Siegpunktzahl zusätzlich zum vorhandenen Stand.
 - `/turnier resetall` setzt nur Punkte zurück; Kill-/Bett-Zähler, Siege, Teams und Spielerzuordnungen bleiben bestehen.
 - Turnierteams werden nicht automatisch aus MBedwars-Teams importiert; die Zuordnung erfolgt explizit mit `/turnier team bind <Turnierteam> <Farbe>`. Ein automatischer Neustart einer unterbrochenen Runde ist nicht implementiert.
