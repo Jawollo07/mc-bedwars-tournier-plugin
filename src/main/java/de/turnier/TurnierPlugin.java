@@ -34,6 +34,7 @@ public final class TurnierPlugin extends JavaPlugin {
         register("turnier", new TurnierCommand(this, manager));
         register("bwturnier", new BwTurnierCommand(this, manager));
         register("turnierboard", new BoardCommand(this, manager, scoreboards));
+        register("mbwctl", new MBedwarsControlCommand(this));
 
         hookMBedwars();
 
