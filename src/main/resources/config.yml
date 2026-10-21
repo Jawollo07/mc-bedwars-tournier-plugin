@@ -6,10 +6,17 @@ scoreboard:
   # Aktualisierungsintervall in Ticks (20 Ticks = 1 Sekunde)
   refresh-ticks: 40
 
-# Punkte für die (optionale) automatische Wertung über die Plugin-API
+# Punkte pro Runde. Platzierungspunkte werden dem Team gutgeschrieben.
+# Kills und Bettzerstörungen zählen zusätzlich für Spieler und Team.
 points:
+  first: 10
+  second: 6
+  third: 3
   kill: 1
-  bed: 5
+  bed: 3
+  bedless-elimination: 1
+  bed-survived: 2
+  # Legacy-Wert für ältere Konfigurationen; neue Wertung nutzt points.first.
   win: 10
 
 # Anbindung an MBedwars (Kills, Bettzerstörungen und Rundensiege automatisch werten)
