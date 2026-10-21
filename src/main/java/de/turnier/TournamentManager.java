@@ -211,9 +211,11 @@ public final class TournamentManager {
 
     /** Adds placement points once per team per round. */
     public void awardPlacement(String bedwarsTeamName, int placement) {
-        if (!active || round < 1 || placement < 1 || placement > 3) return;
-        TeamData team = findTeamByBedwarsName(bedwarsTeamName);
-        if (team == null) return;
+        awardPlacement(findTeamByBedwarsName(bedwarsTeamName), placement);
+    }
+
+    private void awardPlacement(TeamData team, int placement) {
+        if (!active || round < 1 || team == null || placement < 1 || placement > 3) return;
         String k = key(team.name);
         if (!placementsThisRound.add(k)) return;
         String path = placement == 1 ? "points.first" : placement == 2 ? "points.second" : "points.third";
@@ -348,7 +350,7 @@ public final class TournamentManager {
         }
 
         if (winningTeams.isEmpty()) return;
-        for (TeamData t : winningTeams) awardPlacement(t.bedwarsTeam, 1);
+        for (TeamData t : winningTeams) awardPlacement(t, 1);
         awardBedSurvivalBonuses();
     }
 
