@@ -43,7 +43,7 @@ public final class MBedwarsHook implements Listener {
     public void onRoundEnd(RoundEndEvent e) {
         if (!isTournamentArena(e.getArena())) return;
         if (e.isTie()) return;
-        manager.awardWin(e.getWinners());
+        manager.awardWin(e.getWinnerTeam() == null ? null : e.getWinnerTeam().getConfigName(), e.getWinners());
     }
 
     /**
