@@ -2,6 +2,13 @@ package de.turnier;
 
 import de.turnier.TournamentManager.PlayerData;
 import de.turnier.TournamentManager.TeamData;
+import de.marcely.bedwars.api.BedwarsAPI;
+import de.marcely.bedwars.api.arena.Arena;
+import de.marcely.bedwars.api.arena.ArenaStatus;
+import de.marcely.bedwars.api.arena.AddPlayerCause;
+import de.marcely.bedwars.api.arena.Team;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -41,26 +48,9 @@ public final class BwTurnierCommand implements TabExecutor {
                 plugin.msg(s, "&7Automatische Wertung: &e" + m.isAutoScoring());
                 plugin.msg(s, "&7Runde: &e" + m.getRound());
             }
-            case "start" -> {
-                if (m.isActive()) { plugin.msg(s, "&cDas Turnier läuft bereits."); return true; }
-                m.setActive(true);
-                m.setRound(0);
-                m.setRoundActive(false);
-                m.setChampion(null);
-                plugin.broadcastPrefixed("&aDas BedWars-Turnier wurde gestartet!");
-            }
-            case "round" -> {
-                if (!m.isActive()) { plugin.msg(s, "&cStarte zuerst das Turnier."); return true; }
-                if (m.isRoundActive()) { plugin.msg(s, "&cDie aktuelle Runde läuft bereits."); return true; }
-                m.setRound(m.getRound() + 1);
-                m.setRoundActive(true);
-                plugin.broadcastPrefixed("&6Turnierrunde " + m.getRound() + " &awurde gestartet!");
-            }
-            case "roundend" -> {
-                if (!m.isRoundActive()) { plugin.msg(s, "&cEs läuft keine Turnierrunde."); return true; }
-                m.setRoundActive(false);
-                plugin.broadcastPrefixed("&eTurnierrunde " + m.getRound() + " &7wurde beendet.");
-            }
+            case "start" -> start(s, a);
+            case "next", "round" -> startNextRound(s);
+            case "pause", "roundend" -> pause(s);
             case "stats" -> {
                 if (a.length < 2) { plugin.msg(s, "&c/bwturnier stats <Team>"); return true; }
                 TeamData t = m.findTeam(a[1]);
@@ -89,7 +79,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 if (t.wins < Integer.MAX_VALUE) t.wins++;
                 plugin.broadcastPrefixed("&aManueller Sieg für Team &e" + t.name + "&a.");
             }
-            case "finish" -> finish(s);
+            case "finish", "ceremony", "siegerehrung" -> finish(s);
             default -> {
                 plugin.msg(s, "&6/bwturnier start|round|roundend|finish|announce|stats <Team>|win <Team>|on|off|status");
                 return true;
