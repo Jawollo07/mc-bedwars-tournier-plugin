@@ -250,8 +250,8 @@ public final class TournamentManager {
         if (k == null || !bedsDestroyedThisRound.add(k)) return;
         if (breaker.getUniqueId() != null) bedBreakersThisRound.put(k, breaker.getUniqueId());
         award(breaker, configuredPoints("points.bed", 3), false);
-        TeamData owner = findTeamByBedwarsName(bedwarsOwnerTeam);
-        if (owner != null && owner.bedsDestroyed < Integer.MAX_VALUE) owner.bedsDestroyed++;
+        TeamData scoringTeam = findTeam(register(breaker).team);
+        if (scoringTeam != null && scoringTeam.bedsDestroyed < Integer.MAX_VALUE) scoringTeam.bedsDestroyed++;
     }
 
     /** Adds the survival bonus to teams whose beds were never destroyed this round. */
