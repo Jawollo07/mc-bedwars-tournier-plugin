@@ -89,6 +89,99 @@ public final class BwTurnierCommand implements TabExecutor {
         return true;
     }
 
+    private void start(CommandSender s, String[] args) {
+        if (m.isActive()) { plugin.msg(s, "&cDas Turnier läuft bereits."); return; }
+        int rounds = 3;
+        if (args.length >= 2) {
+            try { rounds = Integer.parseInt(args[1]); }
+            catch (NumberFormatException ex) { plugin.msg(s, "&cVerwendung: /bwturnier start [AnzahlRunden]"); return; }
+        }
+        if (rounds < 1 || rounds > 100) { plugin.msg(s, "&cDie Rundenzahl muss zwischen 1 und 100 liegen."); return; }
+        if (m.teams().isEmpty()) { plugin.msg(s, "&cErstelle zuerst mindestens ein Turnierteam."); return; }
+        m.setActive(true);
+        m.setRound(0);
+        m.setTotalRounds(rounds);
+        m.setRoundActive(false);
+        m.setChampion(null);
+        m.save();
+        plugin.broadcastPrefixed("&aTurnier vorbereitet: &e" + rounds + " Runden&a. Nutze &e/bwturnier next &azum Start.");
+    }
+
+    private void startNextRound(CommandSender s) {
+        if (!m.isActive()) { plugin.msg(s, "&cStarte zuerst /bwturnier start [Runden]."); return; }
+        if (m.isRoundActive()) { plugin.msg(s, "&cEine Runde läuft bereits."); return; }
+        if (m.getRound() >= m.getTotalRounds()) {
+            plugin.msg(s, "&eAlle Runden sind gespielt. Nutze /bwturnier ceremony."); return;
+        }
+        if (Bukkit.getPluginManager().getPlugin("MBedwars") == null) {
+            plugin.msg(s, "&cMBedwars ist nicht geladen."); return;
+        }
+        if (m.getArenaName() == null) { plugin.msg(s, "&cSetze zuerst /turnier arena <Arena>."); return; }
+        Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+        if (arena == null) { plugin.msg(s, "&cArena nicht gefunden: &e" + m.getArenaName()); return; }
+        if (arena.getStatus() != ArenaStatus.LOBBY) {
+            plugin.msg(s, "&cDie Arena muss in der Lobby sein. Status: &e" + arena.getStatus()); return;
+        }
+
+        int assigned = 0;
+        int failed = 0;
+        for (PlayerData data : m.allPlayers()) {
+            if (data.team == null) continue;
+            Player player = Bukkit.getPlayer(data.id);
+            if (player == null) { failed++; continue; }
+            TeamData tournamentTeam = m.findTeam(data.team);
+            Team bedwarsTeam = tournamentTeam == null || tournamentTeam.bedwarsTeam == null
+                    ? null : Team.getByName(tournamentTeam.bedwarsTeam);
+            if (bedwarsTeam == null || !arena.isTeamEnabled(bedwarsTeam)) { failed++; continue; }
+            if (BedwarsAPI.getGameAPI().getArenaByPlayer(player) == arena) {
+                if (arena.moveToTeamDuringLobby(player, bedwarsTeam)) assigned++; else failed++;
+            } else {
+                var issue = arena.addPlayer(player, bedwarsTeam, AddPlayerCause.PLUGIN);
+                if (issue == null) assigned++; else failed++;
+            }
+        }
+        if (assigned == 0 || failed > 0) {
+            plugin.msg(s, "&cRunde nicht gestartet. Zugeordnet: &e" + assigned + " &8| &cFehler: &e" + failed);
+            plugin.msg(s, "&7Prüfe Online-Status, Teamfarben und freie Arena-Plätze."); return;
+        }
+        try {
+            arena.setStatus(ArenaStatus.RUNNING);
+        } catch (IllegalStateException ex) {
+            plugin.msg(s, "&cMBedwars konnte die Runde nicht starten: &f" + ex.getMessage()); return;
+        }
+        m.setRound(m.getRound() + 1);
+        m.setRoundActive(true);
+        m.save();
+        plugin.broadcastPrefixed("&6Runde " + m.getRound() + "/" + m.getTotalRounds()
+                + " &awurde gestartet! &7Arena: &e" + arena.getName() + " &8| &7Spieler: &e" + assigned);
+    }
+
+    private void pause(CommandSender s) {
+        if (!m.isActive()) { plugin.msg(s, "&cEs läuft kein Turnier."); return; }
+        if (m.isRoundActive()) {
+            if (Bukkit.getPluginManager().getPlugin("MBedwars") != null && m.getArenaName() != null) {
+                Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+                if (arena != null && arena.getStatus() == ArenaStatus.RUNNING) {
+                    plugin.msg(s, "&cDie Runde läuft noch. Beende zuerst das MBedwars-Match."); return;
+                }
+            }
+            m.setRoundActive(false);
+            m.save();
+        }
+        plugin.broadcastPrefixed("&eTurnierpause nach Runde &6" + m.getRound() + "&e. Wertung und Statistiken bleiben erhalten.");
+        announce();
+    }
+
+    private void announce() {
+        TurnierPlugin.broadcastRaw("&8&m---------- &6ZWISCHENSTAND &8&m----------");
+        int rank = 0;
+        for (TeamData team : m.sortedTeams()) {
+            rank++;
+            TurnierPlugin.broadcastRaw("&e" + rank + ". &6" + team.name + " &8- &f" + team.points + " Punkte &7(" + team.wins + " Siege)");
+        }
+        TurnierPlugin.broadcastRaw("&8&m---------------------------------------");
+    }
+
     private void finish(CommandSender s) {
         if (!m.isActive()) {
             plugin.msg(s, "&cEs läuft kein Turnier.");
