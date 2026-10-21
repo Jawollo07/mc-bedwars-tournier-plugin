@@ -347,6 +347,7 @@ Wenn MBedwars installiert ist, stellt Turnier zusätzlich `/mbwctl` bereit. Der 
 | `/mbwctl status` | Zeigt API-Version, geladene Arenen und Turnierstatus |
 | `/mbwctl arenas` | Listet geladene Arenen mit Status und Spielerzahl |
 | `/mbwctl arena <Name>` | Zeigt Status, Spieler, Zuschauer und aktivierte MBedwars-Teams |
+| `/mbwctl team <Arena> <Farbe> <on|off>` | Aktiviert/deaktiviert ein MBedwars-Farbteam; nur bei gestoppter Arena |
 | `/mbwctl start <Arena>` | Fordert den Start einer Arena aus dem Lobby-Status an |
 | `/mbwctl stop <Arena>` | Beendet das Match in einer Arena |
 | `/mbwctl join <Arena> [Spieler]` | Fügt einen Online-Spieler einer Arena-Lobby hinzu; ohne Spielernamen muss der Ausführende ein Spieler sein |
