@@ -29,7 +29,7 @@ Ein Paper-Plugin zur Verwaltung von BedWars-Turnieren mit eigenen Turnierteams, 
 - **Turniersteuerung:** Turnier starten, einzelne Runden beginnen und beenden sowie das Turnier abschließen.
 - **Rangliste und Bekanntgabe:** Teams nach Punktestand sortiert anzeigen und die Rangliste im Chat bekannt geben.
 - **Sidebar-Scoreboard:** Spieler sehen ihre persönlichen Punkte und die Punkte ihres Turnierteams.
-- **Optionale automatische Wertung:** Mit MBedwars werden Kills, gültige Bettzerstörungen und Rundensiege während einer aktiven Turnierrunde erfasst.
+- **Optionale automatische Wertung:** Mit MBedwars werden Kills, gültige Bettzerstörungen und Rundensiege ausschließlich in der ausgewählten Turnierarena während einer aktiven Turnierrunde erfasst.
 - **Persistente Daten:** Teamstände und Spielerdaten bleiben über Serverneustarts hinweg gespeichert.
 - **Kein Skript/SkBee erforderlich:** Das Plugin ist als Java-Plugin für Paper aufgebaut.
 
@@ -136,11 +136,12 @@ Das Plugin bestimmt den Turniersieger anhand der **Gesamtpunkte der Turnierteams
 | `/bwturnier off` | Deaktiviert die automatische Wertung |
 | `/bwturnier status` | Zeigt Turnierstatus, Wertungsstatus und Rundennummer |
 
-Ein Turnierstart startet **nicht automatisch** eine Runde. Verwende danach `/bwturnier round`. Automatische Wertung ist nur aktiv, wenn alle drei Bedingungen erfüllt sind:
+Ein Turnierstart startet **nicht automatisch** eine Runde. Verwende danach `/bwturnier round`. Automatische Wertung ist nur aktiv, wenn alle vier Bedingungen erfüllt sind:
 
 1. Das Turnier wurde mit `/bwturnier start` gestartet.
 2. Eine Runde wurde mit `/bwturnier round` gestartet und noch nicht beendet.
 3. Die automatische Wertung ist mit `/bwturnier on` aktiviert.
+4. Die MBedwars-Arena wurde mit `/turnier arena <Arena>` als Turnierarena ausgewählt.
 
 ### `/turnierboard` – Scoreboard
 
@@ -174,7 +175,7 @@ mbedwars:
   enabled: true
 ```
 
-Zusätzlich muss die Wertung im Turnierablauf mit `/bwturnier on` aktiviert sein. Mit `/bwturnier off` wird sie pausiert, ohne die vorhandenen Punktestände zu löschen.
+Zusätzlich muss die Wertung im Turnierablauf mit `/bwturnier on` aktiviert sein und die richtige Arena mit `/turnier arena <Arena>` ausgewählt werden. Nur Ereignisse aus dieser Arena zählen; andere öffentliche MBedwars-Matches beeinflussen das Turnier nicht. Mit `/bwturnier off` wird die Wertung pausiert, ohne die vorhandenen Punktestände zu löschen.
 
 Wenn MBedwars nicht installiert ist, überspringt das Plugin die Integration. Wenn MBedwars vorhanden ist, die Addon-Registrierung aber fehlschlägt, prüfe die Serverkonsole und die API-Kompatibilität.
 
@@ -322,7 +323,7 @@ Die Team- und Spielerpunktstände werden gespeichert, die laufende Runde jedoch 
 - Beim Turnierende zählt der gespeicherte **Teampunktestand**. Bei Gleichstand wird kein Champion gespeichert.
 - `/bwturnier win <Team>` ist eine manuelle Wertung und addiert die konfigurierte Siegpunktzahl zusätzlich zum vorhandenen Stand.
 - `/turnier resetall` setzt nur Punkte zurück; Kill-/Bett-Zähler, Siege, Teams und Spielerzuordnungen bleiben bestehen.
-- Ein vollständiger Import, eine Synchronisierung von Turnierteams mit MBedwars-Teams und ein automatischer Neustart einer unterbrochenen Runde sind nicht implementiert.
+- Turnierteams werden nicht automatisch aus MBedwars-Teams importiert; die Zuordnung erfolgt explizit mit `/turnier team bind <Turnierteam> <Farbe>`. Ein automatischer Neustart einer unterbrochenen Runde ist nicht implementiert.
 - Das Plugin ist nicht als Ersatz für MBedwars gedacht; es verwaltet die Turnierwertung neben dem eigentlichen BedWars-Spielbetrieb.
 
 ## Mitwirken
@@ -371,6 +372,7 @@ Wenn MBedwars installiert ist, stellt Turnier zusätzlich `/mbwctl` bereit. Der 
 | `/mbwctl status` | Zeigt API-Version, geladene Arenen und Turnierstatus |
 | `/mbwctl arenas` | Listet geladene Arenen mit Status und Spielerzahl |
 | `/mbwctl arena <Name>` | Zeigt Status, Spieler, Zuschauer und aktivierte MBedwars-Teams |
+| `/mbwctl team <Arena> <Farbe> <on|off>` | Aktiviert/deaktiviert ein MBedwars-Team; nur bei gestoppter Arena |
 | `/mbwctl team <Arena> <Farbe> <on|off>` | Aktiviert/deaktiviert ein MBedwars-Farbteam; nur bei gestoppter Arena |
 | `/mbwctl start <Arena>` | Fordert den Start einer Arena aus dem Lobby-Status an |
 | `/mbwctl stop <Arena>` | Beendet das Match in einer Arena |
@@ -381,4 +383,4 @@ Wenn MBedwars installiert ist, stellt Turnier zusätzlich `/mbwctl` bereit. Der 
 
 Alle `/mbwctl`-Befehle erfordern `turnier.admin`. Die Aktionen sind auf die Funktionen beschränkt, die die offizielle MBedwars-API anbietet. Die Arena muss passend konfiguriert und geladen sein; der API-Start kann bei fehlenden Spielern oder ungültigem Arena-Zustand fehlschlagen.
 
-> Hinweis: Die Turnier-Rundensteuerung (`/bwturnier`) ist weiterhin vom eigentlichen Arena-Zustand getrennt. Starte/beende daher sowohl den Turnierabschnitt als auch die gewünschte MBedwars-Arena passend zum Ablauf. Eine automatische Zuordnung von frei benannten Turnierteams zu MBedwars-Farbteams ist noch nicht Bestandteil dieser Version.
+> Hinweis: Die Turnier-Rundensteuerung (`/bwturnier`) ist weiterhin vom eigentlichen Arena-Zustand getrennt. Starte/beende daher sowohl den Turnierabschnitt als auch die gewünschte MBedwars-Arena passend zum Ablauf. Die automatische Wertung bezieht sich ausschließlich auf die hier ausgewählte Turnierarena. Turnierteams müssen explizit mit MBedwars-Farbteams verknüpft sein; das Plugin importiert oder synchronisiert keine Teamdefinitionen automatisch.
