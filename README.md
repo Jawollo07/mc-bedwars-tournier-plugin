@@ -336,3 +336,24 @@ Fehlerberichte und Verbesserungsvorschläge sind willkommen. Bitte füge bei ein
 - Schritte, mit denen sich der Fehler reproduzieren lässt
 
 Repository: https://github.com/Jawollo07/mc-bedwars-tournier-plugin
+
+
+## MBedwars direkt verwalten
+
+Wenn MBedwars installiert ist, stellt Turnier zusätzlich `/mbwctl` bereit. Der Befehl nutzt die offizielle MBedwars-API; eine lokale `Mbedwars.jar` muss nicht ins Repository gelegt werden.
+
+| Befehl | Wirkung |
+|---|---|
+| `/mbwctl status` | Zeigt API-Version, geladene Arenen und Turnierstatus |
+| `/mbwctl arenas` | Listet geladene Arenen mit Status und Spielerzahl |
+| `/mbwctl arena <Name>` | Zeigt Status, Spieler, Zuschauer und aktivierte MBedwars-Teams |
+| `/mbwctl start <Arena>` | Fordert den Start einer Arena aus dem Lobby-Status an |
+| `/mbwctl stop <Arena>` | Beendet das Match in einer Arena |
+| `/mbwctl join <Arena> [Spieler]` | Fügt einen Online-Spieler einer Arena-Lobby hinzu; ohne Spielernamen muss der Ausführende ein Spieler sein |
+| `/mbwctl kick <Spieler>` | Entfernt einen Spieler aus seiner lokalen MBedwars-Arena |
+| `/mbwctl reload` | Zeigt den Sicherheitshinweis zum MBedwars-Reload |
+| `/mbwctl reload confirm` | Bestätigt den MBedwars-Reload. **Achtung:** MBedwars beendet laufende Arenen und wirft deren Spieler heraus. |
+
+Alle `/mbwctl`-Befehle erfordern `turnier.admin`. Die Aktionen sind auf die Funktionen beschränkt, die die offizielle MBedwars-API anbietet. Die Arena muss passend konfiguriert und geladen sein; der API-Start kann bei fehlenden Spielern oder ungültigem Arena-Zustand fehlschlagen.
+
+> Hinweis: Die Turnier-Rundensteuerung (`/bwturnier`) ist weiterhin vom eigentlichen Arena-Zustand getrennt. Starte/beende daher sowohl den Turnierabschnitt als auch die gewünschte MBedwars-Arena passend zum Ablauf. Eine automatische Zuordnung von frei benannten Turnierteams zu MBedwars-Farbteams ist noch nicht Bestandteil dieser Version.
