@@ -56,35 +56,68 @@ Die Paper-API und die MBedwars-API werden beim Build über Maven-Repositories au
 
 **Hinweis:** Die Plugin-JAR enthält die Turnierverwaltung, nicht Paper oder MBedwars selbst. MBedwars ist zur Laufzeit optional; ohne MBedwars funktionieren die Verwaltungsbefehle weiterhin, automatische Kills-/Bett-/Sieg-Wertung ist dann aber nicht verfügbar.
 
-## Schnellstart
+## Schnellstart: komplettes Turnier mit drei Runden
 
-Die folgenden Beispielbefehle setzt ein installiertes Plugin und die Berechtigung `turnier.admin` voraus. Ersetze die Beispielnamen durch deine gewünschten Namen und Spieler.
+Dieser Ablauf steuert Vorbereitung, Rundenstarts, Pausen und Siegerehrung über das Plugin. Für den automatischen Arena-Start und die automatische Wertung muss MBedwars installiert und kompatibel sein.
+
+### 1. Einmalige Vorbereitung
+
+Lege Teams an und ordne jeden Spieler zu. Spieler müssen den Server bereits mindestens einmal betreten haben.
 
 ```text
 /turnier team create Rot
 /turnier team create Blau
 /turnier spieler assign Jannik Rot
 /turnier spieler assign Alex Blau
-/bwturnier start
-/bwturnier round
+/turnier team bind Rot RED
+/turnier team bind Blau BLUE
+/turnier arena Bedwars1
+/bwturnier on
 ```
 
-Während die Runde läuft, werden bei aktiver automatischer Wertung die unterstützten MBedwars-Ereignisse gewertet. Zum Ende der Runde:
+Ersetze Beispielnamen durch deine tatsächlichen Team-, Spieler-, Farb- und Arenanamen. Die MBedwars-Farben müssen in der Arena aktiviert sein.
+
+### 2. Turnier starten
 
 ```text
-/bwturnier roundend
-/bwturnier announce
-/bwturnier stats Rot
-/bwturnier round
+/bwturnier start 3
+/bwturnier next
 ```
 
-Wenn alle Runden gespielt sind, beende das Turnier:
+Der erste Befehl richtet ein Turnier mit drei Runden ein. Der zweite ordnet die registrierten Spieler ihren MBedwars-Teams zu und startet Runde 1. Wenn zugeordnete Spieler offline sind, Teamfarben fehlen oder Plätze nicht verfügbar sind, startet die Runde nicht und das Plugin meldet die Fehlerzahl.
+
+### 3. Pause nach Runde 1
+
+Wenn MBedwars die Runde beendet, schließt das Plugin die Turnierrunde automatisch und pausiert die Wertung. Warte, bis die Arena wieder in der Lobby ist. Für Zwischenstand und Status:
 
 ```text
-/bwturnier finish
+/bwturnier pause
+/bwturnier status
 ```
 
-Das Plugin bestimmt den Turniersieger anhand der **Gesamtpunkte der Turnierteams**. Bei Punktgleichstand wird kein eindeutiger Sieger gesetzt; der Administrator muss den Gleichstand manuell entscheiden. Eine neue Runde kann nur gestartet werden, wenn das Turnier aktiv ist und aktuell keine Runde läuft.
+Die Punkte und Statistiken bleiben erhalten. Die Pause beendet kein laufendes Match gewaltsam.
+
+### 4. Runde 2 und Runde 3
+
+Sobald die Arena wieder in der Lobby ist, startet dieser Befehl jeweils die nächste Runde:
+
+```text
+/bwturnier next
+```
+
+Nach dem Ende von Runde 2 kannst du wieder /bwturnier pause für den Zwischenstand verwenden. Danach /bwturnier next für Runde 3. Der Rundenzähler wird automatisch verwaltet.
+
+### 5. Siegerehrung
+
+Nach Ende der dritten Runde und sobald kein Match mehr läuft:
+
+```text
+/bwturnier ceremony
+```
+
+Das Plugin beendet das Turnier und verkündet die Rangliste und die Top-Platzierungen auf Basis der Gesamtpunkte. Bei Gleichstand auf Platz 1 wird kein eindeutiger Champion gespeichert; der Gleichstand wird angekündigt. /bwturnier finish bleibt als Alias verfügbar.
+
+**Kurzfassung:** Teams und Spieler zuordnen → Arena setzen → /bwturnier start 3 → /bwturnier next → nach jeder Runde warten, bis die Arena zurück in der Lobby ist → /bwturnier next → nach Runde 3 /bwturnier ceremony.
 
 ## Befehlsübersicht
 
@@ -125,10 +158,10 @@ Das Plugin bestimmt den Turniersieger anhand der **Gesamtpunkte der Turnierteams
 
 | Befehl | Zweck |
 |---|---|
-| `/bwturnier start` | Startet ein Turnier und setzt die aktuelle Rundennummer auf 0 |
-| `/bwturnier round` | Startet die nächste Turnierrunde |
-| `/bwturnier roundend` | Beendet die laufende Turnierrunde |
-| `/bwturnier finish` | Beendet das Turnier und ermittelt den Sieger anhand der Teampunkte |
+| `/bwturnier start [Runden]` | Bereitet ein Turnier mit standardmäßig 3 Runden oder der angegebenen Rundenzahl (1–100) vor |
+| `/bwturnier next` (Alias: `round`) | Ordnet Spieler zu und startet die nächste MBedwars-Runde automatisch |
+| `/bwturnier pause` (Alias: `roundend`) | Zeigt den Zwischenstand und pausiert die Turnierwertung zwischen Runden |
+| `/bwturnier ceremony` (Alias: `finish`, `siegerehrung`) | Beendet das Turnier und verkündet die Siegerehrung mit Rangliste |
 | `/bwturnier announce` | Gibt die Rangliste im Chat bekannt |
 | `/bwturnier stats <Team>` | Zeigt die Statistiken eines Teams |
 | `/bwturnier win <Team>` | Vergibt manuell die konfigurierte Siegpunktzahl und zählt einen Teamsieg |
@@ -136,7 +169,7 @@ Das Plugin bestimmt den Turniersieger anhand der **Gesamtpunkte der Turnierteams
 | `/bwturnier off` | Deaktiviert die automatische Wertung |
 | `/bwturnier status` | Zeigt Turnierstatus, Wertungsstatus und Rundennummer |
 
-Ein Turnierstart startet **nicht automatisch** eine Runde. Verwende danach `/bwturnier round`. Automatische Wertung ist nur aktiv, wenn alle vier Bedingungen erfüllt sind:
+Der Turnierstart legt die Rundenzahl fest; `/bwturnier next` bereitet Spieler vor und startet die nächste Arena-Runde. Automatische Wertung ist nur aktiv, wenn alle vier Bedingungen erfüllt sind:
 
 1. Das Turnier wurde mit `/bwturnier start` gestartet.
 2. Eine Runde wurde mit `/bwturnier round` gestartet und noch nicht beendet.
@@ -233,7 +266,7 @@ plugins/
 - Änderungen an automatischen Wertungen werden gesammelt gespeichert; beim Deaktivieren des Plugins werden Daten ebenfalls gespeichert.
 - Die Speicherung erfolgt über eine temporäre Datei und einen Dateiaustausch, um das Risiko einer teilweise geschriebenen Datendatei zu verringern.
 
-**Wichtig zum Neustart:** Eine laufende Turnierrunde wird nach einem Prozessneustart absichtlich nicht fortgesetzt. Die Punktestände bleiben erhalten, aber du musst das Turnier und anschließend die nächste Runde erneut starten. Starte nach einem Neustart also bei Bedarf `/bwturnier start` und dann `/bwturnier round`.
+**Wichtig zum Neustart:** Eine laufende Turnierrunde wird nach einem Prozessneustart absichtlich nicht fortgesetzt. Die Punktestände bleiben erhalten, aber du musst das Turnier und anschließend die nächste Runde erneut starten. Starte nach einem Neustart bei Bedarf ein neues Turnier mit `/bwturnier start 3` und starte anschließend die erste Runde mit `/bwturnier next`.
 
 Vor manuellen Änderungen an `data.yml` sollte eine Sicherungskopie angelegt werden. Bearbeite die Datei nicht, während der Server sie gleichzeitig speichert.
 
