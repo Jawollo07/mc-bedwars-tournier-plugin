@@ -251,6 +251,7 @@ public final class MBedwarsControlCommand implements TabExecutor {
                 "/mbwctl status",
                 "/mbwctl arenas",
                 "/mbwctl arena <Name>",
+                "/mbwctl team <Arena> <Farbe> <on|off>",
                 "/mbwctl start <Arena>",
                 "/mbwctl stop <Arena>",
                 "/mbwctl join <Arena> [Spieler]",
