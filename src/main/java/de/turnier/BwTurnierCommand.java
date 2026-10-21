@@ -187,6 +187,10 @@ public final class BwTurnierCommand implements TabExecutor {
             plugin.msg(s, "&cEs läuft kein Turnier.");
             return;
         }
+        if (m.isRoundActive()) {
+            plugin.msg(s, "&cDie Runde läuft noch. Beende zuerst das Match und pausiere danach.");
+            return;
+        }
         m.setActive(false);
         m.setRoundActive(false);
 
@@ -205,17 +209,28 @@ public final class BwTurnierCommand implements TabExecutor {
             return;
         }
         m.setChampion(winner.name);
-        TurnierPlugin.broadcastRaw("&8&m---------- &6&lTURNIER BEENDET &8&m----------");
-        TurnierPlugin.broadcastRaw("&eSieger: &6&l" + winner.name);
-        TurnierPlugin.broadcastRaw("&ePunkte: &6" + highest);
+        TurnierPlugin.broadcastRaw("&8&m---------- &6&lSIEGEREHRUNG &8&m----------");
+        TurnierPlugin.broadcastRaw("&6&l1. Platz: &e" + winner.name + " &7- &f" + highest + " Punkte");
+        int podium = 1;
+        for (int i = 1; i < sorted.size() && podium < 3; i++) {
+            TeamData team = sorted.get(i);
+            if (ties > 1 && team.points == highest) continue;
+            podium++;
+            String medal = podium == 2 ? "&7&l2. Platz: " : "&c&l3. Platz: ";
+            TurnierPlugin.broadcastRaw(medal + "&e" + team.name + " &7- &f" + team.points + " Punkte");
+        }
         TurnierPlugin.broadcastRaw("&8&m---------------------------------------");
+        plugin.broadcastPrefixed("&aDas Turnier ist beendet. Glückwunsch an alle Teams!");
     }
 
     @Override
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         if (a.length == 1) {
-            return TurnierPlugin.complete(List.of("start", "round", "roundend", "finish", "announce",
-                    "stats", "win", "on", "off", "status"), a[0]);
+            return TurnierPlugin.complete(List.of("start", "next", "round", "pause", "roundend", "finish",
+                    "ceremony", "siegerehrung", "announce", "stats", "win", "on", "off", "status"), a[0]);
+        }
+        if (a.length == 2 && a[0].equalsIgnoreCase("start")) {
+            return TurnierPlugin.complete(List.of("1", "2", "3", "4", "5"), a[1]);
         }
         if (a.length == 2 && (a[0].equalsIgnoreCase("stats") || a[0].equalsIgnoreCase("win"))) {
             List<String> names = new ArrayList<>();
