@@ -46,7 +46,9 @@ public final class BwTurnierCommand implements TabExecutor {
             case "status" -> {
                 plugin.msg(s, "&7Turnier aktiv: &e" + m.isActive());
                 plugin.msg(s, "&7Automatische Wertung: &e" + m.isAutoScoring());
-                plugin.msg(s, "&7Runde: &e" + m.getRound());
+                plugin.msg(s, "&7Runde: &e" + m.getRound() + "/" + m.getTotalRounds());
+                plugin.msg(s, "&7Arena: &e" + (m.getArenaName() == null ? "nicht gesetzt" : m.getArenaName()));
+                plugin.msg(s, "&7Status: &e" + (!m.isActive() ? "nicht gestartet" : m.isRoundActive() ? "Runde läuft" : "Pause zwischen Runden"));
             }
             case "start" -> start(s, a);
             case "next", "round" -> startNextRound(s);
