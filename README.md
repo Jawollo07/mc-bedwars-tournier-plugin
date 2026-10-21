@@ -161,7 +161,7 @@ Die Anbindung verwendet die veröffentlichte MBedwars-API `de.marcely.bedwars:AP
 |---|---|
 | Spieler eliminiert einen anderen Spieler | Der Killer erhält `points.kill`; das zugeordnete Turnierteam erhält dieselbe Punktzahl |
 | Spieler zerstört ein Bett | Bei spielerverursachter, nicht abgebrochener Bettzerstörung erhält der Spieler `points.bed`; sein Turnierteam erhält dieselbe Punktzahl |
-| MBedwars-Runde endet mit Gewinnern | Jedes Turnierteam, das mindestens einen Gewinner enthält, erhält einmal `points.win` und einen Teamsieg |
+| MBedwars-Runde endet mit Gewinnern | Das mit dem Siegerteam verknüpfte Turnierteam erhält einmal `points.win` und einen Teamsieg, auch wenn die Gewinner offline sind; ohne Mapping wird anhand der Online-Gewinner zugeordnet |
 | Runde endet unentschieden | Keine automatischen Sieg-Punkte |
 
 Die Spielerstatistik speichert Kills und Bettzerstörungen separat. Die persönlichen Punkte und die Teampunkte werden unabhängig voneinander gezählt. Wenn ein Spieler keinem Turnierteam zugeordnet ist, kann er persönliche Punkte und Statistiken sammeln, aber kein Turnierteam erhält seine Punkte.
