@@ -60,6 +60,7 @@ public final class TournamentManager {
     private boolean autoScoring = true;
     private boolean boardEnabled = true;
     private int round;
+    private int totalRounds = 3;
     private String champion;
     private String arenaName;
     private BukkitTask pendingSave;
@@ -80,7 +81,9 @@ public final class TournamentManager {
     public boolean isBoardEnabled() { return boardEnabled; }
     public void setBoardEnabled(boolean v) { boardEnabled = v; }
     public int getRound() { return round; }
-    public void setRound(int v) { round = v; }
+    public void setRound(int v) { round = Math.max(0, v); }
+    public int getTotalRounds() { return totalRounds; }
+    public void setTotalRounds(int v) { totalRounds = Math.max(1, Math.min(100, v)); }
     public String getChampion() { return champion; }
     public void setChampion(String v) { champion = v; }
     public String getArenaName() { return arenaName; }
@@ -279,6 +282,7 @@ public final class TournamentManager {
         autoScoring = y.getBoolean("state.auto-scoring", true);
         boardEnabled = y.getBoolean("state.board-enabled", true);
         round = y.getInt("state.round", 0);
+        totalRounds = Math.max(1, Math.min(100, y.getInt("state.total-rounds", 3)));
         champion = y.getString("state.champion");
         arenaName = y.getString("state.arena");
 
@@ -323,6 +327,7 @@ public final class TournamentManager {
         y.set("state.auto-scoring", autoScoring);
         y.set("state.board-enabled", boardEnabled);
         y.set("state.round", round);
+        y.set("state.total-rounds", totalRounds);
         y.set("state.champion", champion);
         y.set("state.arena", arenaName);
 
