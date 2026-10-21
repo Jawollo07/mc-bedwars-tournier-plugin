@@ -2,6 +2,11 @@ package de.turnier;
 
 import de.turnier.TournamentManager.PlayerData;
 import de.turnier.TournamentManager.TeamData;
+import de.marcely.bedwars.api.BedwarsAPI;
+import de.marcely.bedwars.api.arena.Arena;
+import de.marcely.bedwars.api.arena.ArenaStatus;
+import de.marcely.bedwars.api.arena.AddPlayerCause;
+import de.marcely.bedwars.api.arena.Team;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -37,6 +42,8 @@ public final class TurnierCommand implements TabExecutor {
         switch (a[0].toLowerCase(Locale.ROOT)) {
             case "sudo" -> sudo(s, a);
             case "team" -> team(s, a);
+            case "arena" -> arena(s, a);
+            case "match" -> match(s, a);
             case "spieler" -> spieler(s, a);
             case "add", "remove", "set" -> points(s, a);
             case "reset" -> reset(s, a);
@@ -58,6 +65,9 @@ public final class TurnierCommand implements TabExecutor {
                 "/turnier team delete <Name>",
                 "/turnier team rename <Alt> <Neu>",
                 "/turnier team list",
+                "/turnier team bind <Turnierteam> <MBedwars-Farbe>",
+                "/turnier arena <MBedwars-Arena>",
+                "/turnier match prepare|start|stop",
                 "/turnier team info <Name>",
                 "/turnier spieler assign <Spieler> <Team>",
                 "/turnier spieler remove <Spieler>",
@@ -102,6 +112,15 @@ public final class TurnierCommand implements TabExecutor {
     private void team(CommandSender s, String[] a) {
         String sub = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "";
         switch (sub) {
+            case "bind" -> {
+                if (a.length < 4) { plugin.msg(s, "&c/turnier team bind <Turnierteam> <MBedwars-Farbe>"); return; }
+                TeamData t = m.findTeam(a[2]);
+                if (t == null) { plugin.msg(s, "&cTurnierteam nicht gefunden."); return; }
+                Team bedwarsTeam = Team.getByName(a[3]);
+                if (bedwarsTeam == null) { plugin.msg(s, "&cUnbekannte MBedwars-Teamfarbe."); return; }
+                t.bedwarsTeam = bedwarsTeam.getConfigName();
+                plugin.msg(s, "&aTurnierteam &e" + t.name + " &aist jetzt mit MBedwars-Team &e" + t.bedwarsTeam + " &averknüpft.");
+            }
             case "create" -> {
                 if (a.length < 3) { plugin.msg(s, "&c/turnier team create <Name>"); return; }
                 if (m.createTeam(a[2]) == null) {
@@ -154,6 +173,59 @@ public final class TurnierCommand implements TabExecutor {
                 for (PlayerData p : members) TurnierPlugin.raw(s, "&8- &f" + p.name);
             }
             default -> plugin.msg(s, "&cUnbekannte Teamaktion.");
+        }
+    }
+
+
+    private void arena(CommandSender s, String[] a) {
+        if (a.length < 2) { plugin.msg(s, "&c/turnier arena <MBedwars-Arena>"); return; }
+        if (Bukkit.getPluginManager().getPlugin("MBedwars") == null) { plugin.msg(s, "&cMBedwars ist nicht geladen."); return; }
+        Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(a[1]);
+        if (arena == null) { plugin.msg(s, "&cMBedwars-Arena nicht gefunden."); return; }
+        m.setArenaName(arena.getName());
+        plugin.msg(s, "&aTurnierarena gesetzt: &e" + arena.getName());
+    }
+
+    private void match(CommandSender s, String[] a) {
+        String sub = a.length > 1 ? a[1].toLowerCase(Locale.ROOT) : "";
+        if (Bukkit.getPluginManager().getPlugin("MBedwars") == null) { plugin.msg(s, "&cMBedwars ist nicht geladen."); return; }
+        if (m.getArenaName() == null) { plugin.msg(s, "&cSetze zuerst /turnier arena <Name>."); return; }
+        Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+        if (arena == null) { plugin.msg(s, "&cGespeicherte MBedwars-Arena nicht gefunden: &e" + m.getArenaName()); return; }
+        switch (sub) {
+            case "prepare" -> {
+                if (arena.getStatus() != ArenaStatus.LOBBY) { plugin.msg(s, "&cArena muss in der Lobby sein."); return; }
+                int added = 0, failed = 0;
+                for (PlayerData data : m.allPlayers()) {
+                    Player p = Bukkit.getPlayer(data.id);
+                    if (p == null) continue;
+                    TeamData tournamentTeam = m.findTeam(data.team);
+                    Team bedwarsTeam = tournamentTeam == null || tournamentTeam.bedwarsTeam == null ? null : Team.getByName(tournamentTeam.bedwarsTeam);
+                    if (tournamentTeam == null || bedwarsTeam == null || !arena.isTeamEnabled(bedwarsTeam)) { failed++; continue; }
+                    if (BedwarsAPI.getGameAPI().getArenaByPlayer(p) == arena) {
+                        arena.moveToTeamDuringLobby(p, bedwarsTeam);
+                        added++;
+                    } else {
+                        var issue = arena.addPlayer(p, bedwarsTeam, AddPlayerCause.PLUGIN);
+                        if (issue == null) added++; else failed++;
+                    }
+                }
+                plugin.msg(s, "&aTurnieraufstellung verarbeitet. &eZugeordnet: " + added + " &8| &cNicht zugeordnet: " + failed);
+                if (failed > 0) plugin.msg(s, "&7Prüfe Online-Status, Teamzuordnung, Teamfarbe und freie Plätze.");
+            }
+            case "start" -> {
+                if (!m.isActive()) { plugin.msg(s, "&cStarte zuerst das Turnier mit /bwturnier start."); return; }
+                if (arena.getStatus() != ArenaStatus.LOBBY) { plugin.msg(s, "&cArena muss in der Lobby sein."); return; }
+                arena.setStatus(ArenaStatus.RUNNING);
+                if (!m.isRoundActive()) { m.setRound(m.getRound() + 1); m.setRoundActive(true); }
+                plugin.broadcastPrefixed("&6Turnierrunde " + m.getRound() + " &awurde in Arena &e" + arena.getName() + " &agestartet.");
+            }
+            case "stop" -> {
+                if (!arena.endMatch(null)) { plugin.msg(s, "&cMBedwars konnte das Match nicht beenden."); return; }
+                m.setRoundActive(false);
+                plugin.broadcastPrefixed("&eTurnierrunde " + m.getRound() + " &7in Arena &e" + arena.getName() + " &7beendet.");
+            }
+            default -> plugin.msg(s, "&e/turnier match prepare|start|stop");
         }
     }
 
@@ -283,12 +355,14 @@ public final class TurnierCommand implements TabExecutor {
         String first = a[0].toLowerCase(Locale.ROOT);
         switch (first) {
             case "team" -> {
-                if (a.length == 2) return TurnierPlugin.complete(List.of("create", "delete", "rename", "list", "info"), a[1]);
+                if (a.length == 2) return TurnierPlugin.complete(List.of("create", "delete", "rename", "list", "info", "bind"), a[1]);
                 String sub = a[1].toLowerCase(Locale.ROOT);
-                if (a.length == 3 && List.of("delete", "rename", "info").contains(sub)) {
+                if (a.length == 3 && List.of("delete", "rename", "info", "bind").contains(sub)) {
                     return TurnierPlugin.complete(teamNames(), a[2]);
                 }
             }
+            case "arena" -> { if (a.length == 2 && Bukkit.getPluginManager().getPlugin("MBedwars") != null) return TurnierPlugin.complete(BedwarsAPI.getGameAPI().getArenas().stream().map(Arena::getName).toList(), a[1]); }
+            case "match" -> { if (a.length == 2) return TurnierPlugin.complete(List.of("prepare", "start", "stop"), a[1]); }
             case "spieler" -> {
                 if (a.length == 2) return TurnierPlugin.complete(List.of("assign", "remove", "info"), a[1]);
                 if (a.length == 3) return TurnierPlugin.complete(playerNames(), a[2]);
