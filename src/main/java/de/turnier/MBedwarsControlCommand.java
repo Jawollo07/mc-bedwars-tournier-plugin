@@ -44,6 +44,7 @@ public final class MBedwarsControlCommand implements TabExecutor {
                 case "status" -> status(sender);
                 case "arenas", "list" -> listArenas(sender);
                 case "arena" -> arenaInfo(sender, args);
+                case "team" -> team(sender, args);
                 case "start" -> setRunning(sender, args);
                 case "stop" -> stopArena(sender, args);
                 case "join" -> joinArena(sender, args);
@@ -115,6 +116,30 @@ public final class MBedwarsControlCommand implements TabExecutor {
         }
     }
 
+    private void team(CommandSender sender, String[] args) {
+        if (args.length < 4 || !(args[3].equalsIgnoreCase("on") || args[3].equalsIgnoreCase("off"))) {
+            plugin.msg(sender, "&cVerwendung: /mbwctl team <Arena> <Farbe> <on|off>");
+            return;
+        }
+        Arena arena = findArena(args[1]);
+        if (arena == null) { plugin.msg(sender, "&cArena nicht gefunden: &f" + args[1]); return; }
+        if (arena.getStatus() != ArenaStatus.STOPPED) {
+            plugin.msg(sender, "&cTeams können nur geändert werden, wenn die Arena gestoppt ist.");
+            return;
+        }
+        Team team = Team.getByName(args[2]);
+        if (team == null) { plugin.msg(sender, "&cUnbekannte MBedwars-Teamfarbe: &f" + args[2]); return; }
+        boolean enabled = args[3].equalsIgnoreCase("on");
+        if (arena.isTeamEnabled(team) == enabled) {
+            plugin.msg(sender, "&eTeam &f" + team.getConfigName() + (enabled ? " &eist bereits aktiviert." : " &eist bereits deaktiviert."));
+            return;
+        }
+        if (!arena.setTeamEnabled(team, enabled)) {
+            plugin.msg(sender, "&cMBedwars konnte den Teamstatus nicht ändern. Prüfe die Arena-Konfiguration.");
+            return;
+        }
+        plugin.msg(sender, "&aTeam &e" + team.getConfigName() + (enabled ? " &awurde aktiviert." : " &awurde deaktiviert."));
+    }
     private void setRunning(CommandSender sender, String[] args) {
         if (args.length < 2) {
             plugin.msg(sender, "&cVerwendung: /mbwctl start <Arena>");
@@ -239,8 +264,8 @@ public final class MBedwarsControlCommand implements TabExecutor {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (!sender.hasPermission(TurnierPlugin.ADMIN_PERMISSION)) return List.of();
         if (args.length == 1) return TurnierPlugin.complete(
-                List.of("status", "arenas", "arena", "start", "stop", "join", "kick", "reload"), args[0]);
-        if (args.length == 2 && List.of("arena", "start", "stop", "join").contains(args[0].toLowerCase(Locale.ROOT))) {
+                List.of("status", "arenas", "arena", "team", "start", "stop", "join", "kick", "reload"), args[0]);
+        if (args.length == 2 && List.of("arena", "team", "start", "stop", "join").contains(args[0].toLowerCase(Locale.ROOT))) {
             if (Bukkit.getPluginManager().getPlugin("MBedwars") == null) return List.of();
             try {
                 return TurnierPlugin.complete(BedwarsAPI.getGameAPI().getArenas().stream().map(Arena::getName).toList(), args[1]);
@@ -252,6 +277,12 @@ public final class MBedwarsControlCommand implements TabExecutor {
                 || args.length == 3 && args[0].equalsIgnoreCase("join")) {
             return TurnierPlugin.complete(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(),
                     args[args.length - 1]);
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("team")) {
+            return TurnierPlugin.complete(java.util.Arrays.stream(Team.values()).map(Team::getConfigName).toList(), args[2]);
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("team")) {
+            return TurnierPlugin.complete(List.of("on", "off"), args[3]);
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("reload")) {
             return TurnierPlugin.complete(List.of("confirm"), args[1]);
