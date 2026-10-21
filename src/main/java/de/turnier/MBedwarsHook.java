@@ -3,6 +3,7 @@ package de.turnier;
 import de.marcely.bedwars.api.event.arena.ArenaBedBreakEvent;
 import de.marcely.bedwars.api.arena.Arena;
 import de.marcely.bedwars.api.event.arena.RoundEndEvent;
+import de.marcely.bedwars.api.event.arena.TeamEliminateEvent;
 import de.marcely.bedwars.api.event.player.PlayerKillPlayerEvent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -38,7 +39,13 @@ public final class MBedwarsHook implements Listener {
         if (e.getResult() == ArenaBedBreakEvent.Result.CANCEL) return;
         Player breaker = e.getPlayer();
         if (breaker == null) return;
-        manager.awardBed(breaker);
+        if (e.getTeam() != null) manager.awardBed(breaker, e.getTeam().getConfigName());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onTeamEliminate(TeamEliminateEvent e) {
+        if (!isTournamentArena(e.getArena()) || e.getTeam() == null) return;
+        manager.recordElimination(e.getTeam().getConfigName(), e.getCausingPlayer());
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -47,7 +54,8 @@ public final class MBedwarsHook implements Listener {
         if (!e.isTie()) {
             manager.awardWin(e.getWinnerTeam() == null ? null : e.getWinnerTeam().getConfigName(), e.getWinners());
         } else {
-            plugin.broadcastPrefixed("&eRunde " + manager.getRound() + " endete unentschieden. Es gibt keine Sieg-Punkte.");
+            manager.awardBedSurvivalBonuses();
+            plugin.broadcastPrefixed("&eRunde " + manager.getRound() + " endete unentschieden. Es gibt keine Platzierungspunkte.");
         }
         manager.setRoundActive(false);
         manager.save();
