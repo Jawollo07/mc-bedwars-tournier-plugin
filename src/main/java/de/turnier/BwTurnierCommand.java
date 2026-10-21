@@ -64,6 +64,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 TurnierPlugin.raw(s, "&7Siege: &a" + t.wins);
                 TurnierPlugin.raw(s, "&7Kills: &c" + kills);
                 TurnierPlugin.raw(s, "&7Bettzerstörungen: &d" + beds);
+                TurnierPlugin.raw(s, "&7Vom Team zerstörte Betten: &d" + t.bedsDestroyed);
             }
             case "announce" -> {
                 TurnierPlugin.broadcastRaw("&8&m---------- &6BEDWARS-TURNIER &8&m----------");
@@ -76,7 +77,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 if (a.length < 2) { plugin.msg(s, "&c/bwturnier win <Team>"); return true; }
                 TeamData t = m.findTeam(a[1]);
                 if (t == null) { plugin.msg(s, "&cTeam nicht gefunden."); return true; }
-                int points = Math.max(0, plugin.getConfig().getInt("points.win", 10));
+                int points = Math.max(0, plugin.getConfig().getInt("points.first", 10));
                 t.points = TournamentManager.saturatedAdd(t.points, points);
                 if (t.wins < Integer.MAX_VALUE) t.wins++;
                 plugin.broadcastPrefixed("&aManueller Sieg für Team &e" + t.name + "&a.");
@@ -151,6 +152,7 @@ public final class BwTurnierCommand implements TabExecutor {
         } catch (IllegalStateException ex) {
             plugin.msg(s, "&cMBedwars konnte die Runde nicht starten: &f" + ex.getMessage()); return;
         }
+        m.beginRoundScoring();
         m.setRound(m.getRound() + 1);
         m.setRoundActive(true);
         m.save();
