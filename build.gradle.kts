@@ -8,16 +8,20 @@ version = "1.0.0"
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://repo.marcely.de/repository/maven-public/")
 }
 
 dependencies {
-    // Falls die Auflösung scheitert: feste Version nutzen, z. B. 26.3.build.143-beta
+    // Paper wird vom Server bereitgestellt.
     compileOnly("io.papermc.paper:paper-api:26.3.build.143-beta")
+
+    // Offizielle MBedwars-API aus dem Maven-Repository; keine lokale JAR nötig.
+    compileOnly("de.marcely.bedwars:API:5.5.9")
+
+    // Für Unit-Tests die API-Klassen auf dem Laufzeit-Classpath verfügbar machen.
     testRuntimeOnly("io.papermc.paper:paper-api:26.3.build.143-beta")
-    // MBedwars-API (nur zum Kompilieren, wird auf dem Server vom MBedwars-Plugin gestellt)
-    compileOnly(files("libs/MBedwars-5_5_9_1.jar"))
+    testRuntimeOnly("de.marcely.bedwars:API:5.5.9")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.2")
-    // Gradle 9 benötigt den Launcher explizit auf dem Test-Laufzeit-Classpath.
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.2")
 }
 
