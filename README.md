@@ -338,6 +338,30 @@ Fehlerberichte und Verbesserungsvorschläge sind willkommen. Bitte füge bei ein
 Repository: https://github.com/Jawollo07/mc-bedwars-tournier-plugin
 
 
+
+### Turnier und MBedwars gemeinsam steuern
+
+Die Turnierverwaltung kann eine MBedwars-Arena als Turnierarena speichern und Turnierteams mit MBedwars-Farbteams verknüpfen. Die Zuordnung wird in `plugins/Turnier/data.yml` gespeichert.
+
+1. Turnierteams und Spieler anlegen/zuordnen:
+   - `/turnier team create <Turnierteam>`
+   - `/turnier spieler assign <Spieler> <Turnierteam>`
+2. MBedwars-Arena festlegen:
+   - `/turnier arena <Arena>`
+3. Jedes Turnierteam mit einer MBedwars-Farbe verbinden:
+   - `/turnier team bind <Turnierteam> <Farbe>` (z. B. RED oder BLUE, abhängig von der MBedwars-Konfiguration)
+4. Spieler anhand der gespeicherten Turnierzuordnung in die Arena bringen:
+   - `/turnier match prepare`
+5. Turnier und Arena gemeinsam starten:
+   - `/bwturnier start`
+   - `/turnier match start`
+6. Match beenden:
+   - `/turnier match stop`
+
+`prepare` benötigt online befindliche Spieler, eine Arena im Lobby-Status, aktivierte passende MBedwars-Teams und freie Plätze. Spieler, die nicht zugeordnet werden konnten, werden in einer Fehlerzahl ausgewiesen. Vor einem echten Turnierablauf bitte auf einer Testarena prüfen.
+
+Diese Integration steuert die ausgewählte lokale Arena über die öffentliche API. Sie ändert nicht automatisch alle MBedwars-Serverkonfigurationen oder globale Shop-/Upgrade-/Spawner-Einstellungen. Solche Optionen hängen von den konkreten Konfigurations- und Speichermöglichkeiten der installierten MBedwars-Version ab.
+
 ## MBedwars direkt verwalten
 
 Wenn MBedwars installiert ist, stellt Turnier zusätzlich `/mbwctl` bereit. Der Befehl nutzt die offizielle MBedwars-API; eine lokale `Mbedwars.jar` muss nicht ins Repository gelegt werden.
