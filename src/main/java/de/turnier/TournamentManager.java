@@ -220,21 +220,36 @@ public final class TournamentManager {
         award(breaker, configuredPoints("points.bed", 5), false);
     }
 
-    /** Rundensieg: jedes Turnierteam mit mindestens einem Gewinner bekommt einmal die Sieg-Punkte. */
-    public void awardWin(Collection<Player> winners) {
-        if (!scoringOpen() || winners == null || winners.isEmpty()) return;
-        int pts = configuredPoints("points.win", 10);
+    /** Rundensieg: das gemappte MBedwars-Siegerteam zählt auch dann, wenn seine Spieler offline sind. */
+    public void awardWin(String bedwarsTeamName, Collection<Player> winners) {
+        if (!scoringOpen()) return;
         java.util.Set<TeamData> winningTeams = new java.util.LinkedHashSet<>();
-        for (Player p : winners) {
-            if (p == null) continue;
-            TeamData t = findTeam(register(p).team);
-            if (t != null) winningTeams.add(t);
+
+        if (bedwarsTeamName != null) {
+            for (TeamData team : teams.values()) {
+                if (team.bedwarsTeam != null && team.bedwarsTeam.equalsIgnoreCase(bedwarsTeamName)) {
+                    winningTeams.add(team);
+                    break;
+                }
+            }
         }
+
+        // Fallback für Turnierteams ohne explizites MBedwars-Mapping.
+        if (winningTeams.isEmpty() && winners != null) {
+            for (Player p : winners) {
+                if (p == null) continue;
+                TeamData t = findTeam(register(p).team);
+                if (t != null) winningTeams.add(t);
+            }
+        }
+
+        if (winningTeams.isEmpty()) return;
+        int pts = configuredPoints("points.win", 10);
         for (TeamData t : winningTeams) {
             t.points = saturatedAdd(t.points, pts);
             if (t.wins < Integer.MAX_VALUE) t.wins++;
         }
-        if (!winningTeams.isEmpty()) scheduleSave();
+        scheduleSave();
     }
 
     private void award(Player p, int pts, boolean kill) {
