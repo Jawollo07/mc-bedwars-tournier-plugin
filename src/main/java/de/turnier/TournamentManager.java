@@ -17,6 +17,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.UUID;
 import java.util.logging.Level;
 import org.bukkit.scheduler.BukkitTask;
@@ -28,6 +30,7 @@ public final class TournamentManager {
         public String name;
         public int points;
         public int wins;
+        public int bedsDestroyed;
         public String bedwarsTeam;
 
         TeamData(String name) {
@@ -64,6 +67,10 @@ public final class TournamentManager {
     private String champion;
     private String arenaName;
     private BukkitTask pendingSave;
+    private final Set<String> bedsDestroyedThisRound = new LinkedHashSet<>();
+    private final Set<String> placementsThisRound = new LinkedHashSet<>();
+    private final List<String> eliminatedThisRound = new ArrayList<>();
+    private final Map<String, UUID> bedBreakersThisRound = new HashMap<>();
 
     public TournamentManager(TurnierPlugin plugin) {
         this.plugin = plugin;
@@ -138,6 +145,8 @@ public final class TournamentManager {
     public List<TeamData> sortedTeams() {
         List<TeamData> list = new ArrayList<>(teams.values());
         list.sort(Comparator.comparingInt((TeamData t) -> t.points).reversed()
+                .thenComparing(Comparator.comparingInt((TeamData t) -> t.wins).reversed())
+                .thenComparing(Comparator.comparingInt((TeamData t) -> t.bedsDestroyed).reversed())
                 .thenComparing(t -> t.name, String.CASE_INSENSITIVE_ORDER));
         return list;
     }
@@ -180,6 +189,98 @@ public final class TournamentManager {
         for (TeamData t : teams.values()) t.points = 0;
     }
 
+    /** Clears per-round tracking without resetting tournament-wide totals. */
+    public void beginRoundScoring() {
+        bedsDestroyedThisRound.clear();
+        placementsThisRound.clear();
+        eliminatedThisRound.clear();
+        bedBreakersThisRound.clear();
+    }
+
+    private TeamData findTeamByBedwarsName(String bedwarsTeamName) {
+        if (bedwarsTeamName == null) return null;
+        for (TeamData team : teams.values()) {
+            if (team.bedwarsTeam != null && team.bedwarsTeam.equalsIgnoreCase(bedwarsTeamName)) return team;
+        }
+        return null;
+    }
+
+    private static String roundKey(String value) {
+        return value == null ? null : value.toLowerCase(Locale.ROOT);
+    }
+
+    /** Adds placement points once per team per round. */
+    public void awardPlacement(String bedwarsTeamName, int placement) {
+        if (!active || round < 1 || placement < 1 || placement > 3) return;
+        TeamData team = findTeamByBedwarsName(bedwarsTeamName);
+        if (team == null) return;
+        String k = key(team.name);
+        if (!placementsThisRound.add(k)) return;
+        String path = placement == 1 ? "points.first" : placement == 2 ? "points.second" : "points.third";
+        int fallback = placement == 1 ? 10 : placement == 2 ? 6 : 3;
+        team.points = saturatedAdd(team.points, configuredPoints(path, fallback));
+        if (placement == 1 && team.wins < Integer.MAX_VALUE) team.wins++;
+        scheduleSave();
+    }
+
+    /** Records elimination order: first eliminated is third, second is second in a three-team match. */
+    public void recordElimination(String bedwarsTeamName, Player causingPlayer) {
+        if (!scoringOpen()) return;
+        TeamData eliminated = findTeamByBedwarsName(bedwarsTeamName);
+        if (eliminated == null) return;
+        String k = key(eliminated.name);
+        if (eliminatedThisRound.contains(k)) return;
+        eliminatedThisRound.add(k);
+        int placement = eliminatedThisRound.size() == 1 ? 3 : eliminatedThisRound.size() == 2 ? 2 : 0;
+        if (placement > 0) awardPlacement(bedwarsTeamName, placement);
+
+        String bedKey = roundKey(bedwarsTeamName);
+        UUID bedBreaker = bedKey == null ? null : bedBreakersThisRound.get(bedKey);
+        if (bedKey != null && bedsDestroyedThisRound.contains(bedKey) && causingPlayer != null
+                && !causingPlayer.getUniqueId().equals(bedBreaker)) {
+            awardExtra(causingPlayer, configuredPoints("points.bedless-elimination", 1));
+        }
+        scheduleSave();
+    }
+
+    /** A bed scores only once per owning BedWars team in a round. */
+    public void awardBed(Player breaker, String bedwarsOwnerTeam) {
+        if (!scoringOpen() || breaker == null || bedwarsOwnerTeam == null) return;
+        String k = roundKey(bedwarsOwnerTeam);
+        if (k == null || !bedsDestroyedThisRound.add(k)) return;
+        if (breaker.getUniqueId() != null) bedBreakersThisRound.put(k, breaker.getUniqueId());
+        award(breaker, configuredPoints("points.bed", 3), false);
+        TeamData owner = findTeamByBedwarsName(bedwarsOwnerTeam);
+        if (owner != null && owner.bedsDestroyed < Integer.MAX_VALUE) owner.bedsDestroyed++;
+    }
+
+    /** Adds the survival bonus to teams whose beds were never destroyed this round. */
+    public void awardBedSurvivalBonuses() {
+        if (!active || round < 1) return;
+        for (TeamData team : teams.values()) {
+            if (team.bedwarsTeam == null) continue;
+            String k = roundKey(team.bedwarsTeam);
+            if (k != null && !bedsDestroyedThisRound.contains(k)) {
+                team.points = saturatedAdd(team.points, configuredPoints("points.bed-survived", 2));
+            }
+        }
+        scheduleSave();
+    }
+
+    public boolean wasBedDestroyed(String bedwarsTeamName) {
+        String k = roundKey(bedwarsTeamName);
+        return k != null && bedsDestroyedThisRound.contains(k);
+    }
+
+    private void awardExtra(Player player, int points) {
+        if (player == null || points <= 0) return;
+        PlayerData data = register(player);
+        data.points = saturatedAdd(data.points, points);
+        TeamData team = findTeam(data.team);
+        if (team != null) team.points = saturatedAdd(team.points, points);
+        scheduleSave();
+    }
+
     private static boolean validTeamName(String name) {
         return name != null && name.matches("[\\p{L}\\p{N}_-]{1,32}");
     }
@@ -220,7 +321,7 @@ public final class TournamentManager {
 
     /** Für spätere Anbindung an ein BedWars-Plugin: Bettzerstörung gutschreiben. */
     public void awardBed(Player breaker) {
-        award(breaker, configuredPoints("points.bed", 5), false);
+        award(breaker, configuredPoints("points.bed", 3), false);
     }
 
     /** Rundensieg: das gemappte MBedwars-Siegerteam zählt auch dann, wenn seine Spieler offline sind. */
@@ -247,12 +348,8 @@ public final class TournamentManager {
         }
 
         if (winningTeams.isEmpty()) return;
-        int pts = configuredPoints("points.win", 10);
-        for (TeamData t : winningTeams) {
-            t.points = saturatedAdd(t.points, pts);
-            if (t.wins < Integer.MAX_VALUE) t.wins++;
-        }
-        scheduleSave();
+        for (TeamData t : winningTeams) awardPlacement(t.bedwarsTeam, 1);
+        awardBedSurvivalBonuses();
     }
 
     private void award(Player p, int pts, boolean kill) {
@@ -293,6 +390,7 @@ public final class TournamentManager {
             TeamData t = new TeamData(String.valueOf(n));
             t.points = num(raw.get("points"));
             t.wins = num(raw.get("wins"));
+            t.bedsDestroyed = num(raw.get("beds-destroyed"));
             Object bedwarsTeam = raw.get("bedwars-team");
             t.bedwarsTeam = bedwarsTeam == null ? null : String.valueOf(bedwarsTeam);
             teams.put(key(t.name), t);
@@ -337,6 +435,7 @@ public final class TournamentManager {
             m.put("name", t.name);
             m.put("points", t.points);
             m.put("wins", t.wins);
+            m.put("beds-destroyed", t.bedsDestroyed);
             if (t.bedwarsTeam != null) m.put("bedwars-team", t.bedwarsTeam);
             list.add(m);
         }
