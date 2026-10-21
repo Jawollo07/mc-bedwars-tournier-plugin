@@ -19,6 +19,7 @@ public final class TurnierPlugin extends JavaPlugin {
 
     private TournamentManager manager;
     private ScoreboardService scoreboards;
+    private TurnierBedwarsAddon bedwarsAddon;
 
     @Override
     public void onEnable() {
@@ -51,6 +52,9 @@ public final class TurnierPlugin extends JavaPlugin {
         if (manager != null) {
             manager.save();
         }
+        if (bedwarsAddon != null && bedwarsAddon.isRegistered()) {
+            bedwarsAddon.unregister();
+        }
     }
 
     private void hookMBedwars() {
@@ -59,11 +63,23 @@ public final class TurnierPlugin extends JavaPlugin {
             getLogger().info("MBedwars nicht gefunden – automatische Wertung ist nicht aktiv.");
             return;
         }
+
         try {
+            bedwarsAddon = new TurnierBedwarsAddon(this);
+            if (!bedwarsAddon.register()) {
+                getLogger().warning("MBedwars hat das Turnier-Addon nicht registriert; automatische Wertung bleibt deaktiviert.");
+                bedwarsAddon = null;
+                return;
+            }
+
             getServer().getPluginManager().registerEvents(new MBedwarsHook(manager), this);
-            getLogger().info("MBedwars-Anbindung aktiv.");
+            getLogger().info("MBedwars-Addon registriert; automatische Wertung ist aktiv.");
         } catch (Exception | LinkageError t) {
             getLogger().warning("MBedwars-Anbindung fehlgeschlagen: " + t);
+            if (bedwarsAddon != null && bedwarsAddon.isRegistered()) {
+                bedwarsAddon.unregister();
+            }
+            bedwarsAddon = null;
         }
     }
 
