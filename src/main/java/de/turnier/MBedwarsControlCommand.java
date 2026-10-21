@@ -5,7 +5,7 @@ import de.marcely.bedwars.api.arena.Arena;
 import de.marcely.bedwars.api.arena.ArenaStatus;
 import de.marcely.bedwars.api.arena.AddPlayerIssue;
 import de.marcely.bedwars.api.arena.AddPlayerCause;
-import de.marcely.bedwars.api.game.Team;
+import de.marcely.bedwars.api.arena.Team;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
@@ -111,7 +111,7 @@ public final class MBedwarsControlCommand implements TabExecutor {
                 + " &8| &7Zuschauer: &f" + arena.getSpectators().size());
         plugin.msg(sender, "&7Aktive Teams: &f" + arena.getEnabledTeams().size());
         for (Team team : arena.getEnabledTeams()) {
-            plugin.msg(sender, "&8- &f" + team.getName());
+            plugin.msg(sender, "&8- &f" + team.getConfigName());
         }
     }
 
