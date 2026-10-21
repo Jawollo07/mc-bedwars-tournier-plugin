@@ -12,7 +12,7 @@ commands:
     usage: /turnier
   bwturnier:
     description: Turnierablauf (Start, Runden, Ende, Wertung)
-    usage: /bwturnier <start|round|roundend|finish|announce|stats|win|on|off|status>
+    usage: /bwturnier <start [Runden]|next|pause|ceremony|announce|stats|win|on|off|status>
     permission: turnier.admin
     permission-message: "&cKeine Berechtigung."
   turnierboard:
