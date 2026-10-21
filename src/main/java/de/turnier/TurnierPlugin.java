@@ -73,7 +73,7 @@ public final class TurnierPlugin extends JavaPlugin {
                 return;
             }
 
-            getServer().getPluginManager().registerEvents(new MBedwarsHook(manager), this);
+            getServer().getPluginManager().registerEvents(new MBedwarsHook(this, manager), this);
             getLogger().info("MBedwars-Addon registriert; automatische Wertung ist aktiv.");
         } catch (Exception | LinkageError t) {
             getLogger().warning("MBedwars-Anbindung fehlgeschlagen: " + t);
