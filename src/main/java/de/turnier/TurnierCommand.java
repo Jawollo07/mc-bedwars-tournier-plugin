@@ -118,6 +118,13 @@ public final class TurnierCommand implements TabExecutor {
                 if (t == null) { plugin.msg(s, "&cTurnierteam nicht gefunden."); return; }
                 Team bedwarsTeam = Team.getByName(a[3]);
                 if (bedwarsTeam == null) { plugin.msg(s, "&cUnbekannte MBedwars-Teamfarbe."); return; }
+                for (TeamData other : m.teams()) {
+                    if (other != t && other.bedwarsTeam != null
+                            && other.bedwarsTeam.equalsIgnoreCase(bedwarsTeam.getConfigName())) {
+                        plugin.msg(s, "&cDiese MBedwars-Farbe ist bereits dem Turnierteam &e" + other.name + " &czugeordnet.");
+                        return;
+                    }
+                }
                 t.bedwarsTeam = bedwarsTeam.getConfigName();
                 plugin.msg(s, "&aTurnierteam &e" + t.name + " &aist jetzt mit MBedwars-Team &e" + t.bedwarsTeam + " &averknüpft.");
             }
