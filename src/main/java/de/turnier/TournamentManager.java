@@ -28,6 +28,7 @@ public final class TournamentManager {
         public String name;
         public int points;
         public int wins;
+        public String bedwarsTeam;
 
         TeamData(String name) {
             this.name = name;
@@ -60,6 +61,7 @@ public final class TournamentManager {
     private boolean boardEnabled = true;
     private int round;
     private String champion;
+    private String arenaName;
     private BukkitTask pendingSave;
 
     public TournamentManager(TurnierPlugin plugin) {
@@ -81,6 +83,8 @@ public final class TournamentManager {
     public void setRound(int v) { round = v; }
     public String getChampion() { return champion; }
     public void setChampion(String v) { champion = v; }
+    public String getArenaName() { return arenaName; }
+    public void setArenaName(String v) { arenaName = v; }
 
     // ----------------------------------------------------------------- Teams
 
@@ -261,6 +265,7 @@ public final class TournamentManager {
         boardEnabled = y.getBoolean("state.board-enabled", true);
         round = y.getInt("state.round", 0);
         champion = y.getString("state.champion");
+        arenaName = y.getString("state.arena");
 
         teams.clear();
         for (Map<?, ?> raw : y.getMapList("teams")) {
@@ -269,6 +274,8 @@ public final class TournamentManager {
             TeamData t = new TeamData(String.valueOf(n));
             t.points = num(raw.get("points"));
             t.wins = num(raw.get("wins"));
+            Object bedwarsTeam = raw.get("bedwars-team");
+            t.bedwarsTeam = bedwarsTeam == null ? null : String.valueOf(bedwarsTeam);
             teams.put(key(t.name), t);
         }
 
@@ -302,6 +309,7 @@ public final class TournamentManager {
         y.set("state.board-enabled", boardEnabled);
         y.set("state.round", round);
         y.set("state.champion", champion);
+        y.set("state.arena", arenaName);
 
         List<Map<String, Object>> list = new ArrayList<>();
         for (TeamData t : teams.values()) {
@@ -309,6 +317,7 @@ public final class TournamentManager {
             m.put("name", t.name);
             m.put("points", t.points);
             m.put("wins", t.wins);
+            if (t.bedwarsTeam != null) m.put("bedwars-team", t.bedwarsTeam);
             list.add(m);
         }
         y.set("teams", list);
