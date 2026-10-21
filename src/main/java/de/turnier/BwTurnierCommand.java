@@ -22,6 +22,10 @@ public final class BwTurnierCommand implements TabExecutor {
 
     @Override
     public boolean onCommand(CommandSender s, Command c, String label, String[] a) {
+        if (!s.hasPermission(TurnierPlugin.ADMIN_PERMISSION)) {
+            plugin.msg(s, "&cDu hast keine Berechtigung.");
+            return true;
+        }
         String sub = a.length > 0 ? a[0].toLowerCase(Locale.ROOT) : "";
         switch (sub) {
             case "on" -> {
