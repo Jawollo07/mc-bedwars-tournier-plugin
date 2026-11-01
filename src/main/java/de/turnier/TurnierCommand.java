@@ -337,8 +337,8 @@ public final class TurnierCommand implements TabExecutor {
             t.points = 0;
             plugin.msg(s, "&aPunkte von Team &e" + t.name + " &aauf 0 gesetzt.");
         } else {
-            PlayerData p = m.findPlayer(a[2]);
-            if (p == null) { plugin.msg(s, "&cSpieler nicht gefunden."); return; }
+            PlayerData p = resolvePlayer(s, a[2]);
+            if (p == null) return;
             p.points = 0;
             plugin.msg(s, "&aPunkte von &e" + p.name + " &aauf 0 gesetzt.");
         }
