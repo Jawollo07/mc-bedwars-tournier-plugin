@@ -209,7 +209,7 @@ public final class TurnierCommand implements TabExecutor {
                     Player p = Bukkit.getPlayer(data.id);
                     if (p == null) { failed++; continue; }
                     TeamData tournamentTeam = m.findTeam(data.team);
-                    Team bedwarsTeam = tournamentTeam == null || tournamentTeam.bedwarsTeam == null ? null : Team.getByName(tournamentTeam.bedwarsTeam);
+                    Team bedwarsTeam = tournamentTeam == null ? null : BedwarsTeamResolver.resolve(tournamentTeam.bedwarsTeam);
                     if (tournamentTeam == null || bedwarsTeam == null || !arena.isTeamEnabled(bedwarsTeam)) { failed++; continue; }
                     if (BedwarsAPI.getGameAPI().getArenaByPlayer(p) == arena) {
                         if (arena.moveToTeamDuringLobby(p, bedwarsTeam)) added++; else failed++;
