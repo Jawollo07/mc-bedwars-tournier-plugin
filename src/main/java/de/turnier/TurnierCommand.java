@@ -67,7 +67,7 @@ public final class TurnierCommand implements TabExecutor {
                 "/turnier team list",
                 "/turnier team bind <Turnierteam> <MBedwars-Farbe>",
                 "/turnier arena <MBedwars-Arena>",
-                "/turnier match prepare|start|stop",
+                "/turnier match prepare|stop (Rundenstart: /bwturnier next)",
                 "/turnier team info <Name>",
                 "/turnier spieler assign <Spieler> <Team>",
                 "/turnier spieler remove <Spieler>",
@@ -221,22 +221,24 @@ public final class TurnierCommand implements TabExecutor {
                 plugin.msg(s, "&aTurnieraufstellung verarbeitet. &eZugeordnet: " + added + " &8| &cNicht zugeordnet: " + failed);
                 if (failed > 0) plugin.msg(s, "&7Prüfe Online-Status, Teamzuordnung, Teamfarbe und freie Plätze.");
             }
-            case "start" -> {
-                if (!m.isActive()) { plugin.msg(s, "&cStarte zuerst das Turnier mit /bwturnier start."); return; }
-                if (arena.getStatus() != ArenaStatus.LOBBY) { plugin.msg(s, "&cArena muss in der Lobby sein."); return; }
-                try {
-                    arena.setStatus(ArenaStatus.RUNNING);
-                } catch (IllegalStateException ex) {
-                    plugin.msg(s, "&cMBedwars konnte die Runde nicht starten: &f" + ex.getMessage());
+            case "start" -> plugin.msg(s,
+                    "&eDirekter Arena-Start ist deaktiviert, damit keine Turnierprüfungen umgangen werden. Nutze /bwturnier next.");
+            case "stop" -> {
+                if (!m.isActive() || !m.isRoundActive()) {
+                    plugin.msg(s, "&cEs läuft aktuell keine aktive Turnierrunde.");
                     return;
                 }
-                if (!m.isRoundActive()) { m.setRound(m.getRound() + 1); m.setRoundActive(true); }
-                plugin.broadcastPrefixed("&6Turnierrunde " + m.getRound() + " &awurde in Arena &e" + arena.getName() + " &agestartet.");
-            }
-            case "stop" -> {
-                if (!arena.endMatch(null)) { plugin.msg(s, "&cMBedwars konnte das Match nicht beenden."); return; }
-                m.setRoundActive(false);
-                plugin.broadcastPrefixed("&eTurnierrunde " + m.getRound() + " &7in Arena &e" + arena.getName() + " &7beendet.");
+                if (arena.getStatus() != ArenaStatus.RUNNING) {
+                    plugin.msg(s, "&cDie Turnierarena läuft derzeit nicht.");
+                    return;
+                }
+                if (!arena.endMatch(null)) {
+                    plugin.msg(s, "&cMBedwars konnte das Match nicht beenden.");
+                    return;
+                }
+                // Do not close scoring here: MBedwars fires RoundEndEvent as part of
+                // ending the match. MBedwarsHook must still see roundActive=true there.
+                plugin.msg(s, "&eMatch-Ende ausgelöst. Die Rundenauswertung wird durch MBedwars abgeschlossen.");
             }
             default -> plugin.msg(s, "&e/turnier match prepare|start|stop");
         }
@@ -372,7 +374,7 @@ public final class TurnierCommand implements TabExecutor {
                 }
             }
             case "arena" -> { if (a.length == 2 && Bukkit.getPluginManager().getPlugin("MBedwars") != null) return TurnierPlugin.complete(BedwarsAPI.getGameAPI().getArenas().stream().map(Arena::getName).toList(), a[1]); }
-            case "match" -> { if (a.length == 2) return TurnierPlugin.complete(List.of("prepare", "start", "stop"), a[1]); }
+            case "match" -> { if (a.length == 2) return TurnierPlugin.complete(List.of("prepare", "stop"), a[1]); }
             case "spieler" -> {
                 if (a.length == 2) return TurnierPlugin.complete(List.of("assign", "remove", "info"), a[1]);
                 if (a.length == 3) return TurnierPlugin.complete(playerNames(), a[2]);
