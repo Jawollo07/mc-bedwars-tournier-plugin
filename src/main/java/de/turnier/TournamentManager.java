@@ -3,6 +3,7 @@ package de.turnier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import de.marcely.bedwars.api.arena.Team;
 
 import java.io.File;
 import java.io.IOException;
@@ -224,7 +225,7 @@ public final class TournamentManager {
     private TeamData findTeamByBedwarsName(String bedwarsTeamName) {
         if (bedwarsTeamName == null) return null;
         for (TeamData team : teams.values()) {
-            if (team.bedwarsTeam != null && team.bedwarsTeam.equalsIgnoreCase(bedwarsTeamName)) return team;
+            if (team.bedwarsTeam != null && BedwarsTeamResolver.same(team.bedwarsTeam, bedwarsTeamName)) return team;
         }
         return null;
     }
@@ -272,7 +273,7 @@ public final class TournamentManager {
     /** A bed scores only once per owning BedWars team in a round. */
     public void awardBed(Player breaker, String bedwarsOwnerTeam) {
         if (!scoringOpen() || breaker == null || bedwarsOwnerTeam == null) return;
-        String k = roundKey(bedwarsOwnerTeam);
+        String k = BedwarsTeamResolver.key(bedwarsOwnerTeam);
         if (k == null || !bedsDestroyedThisRound.add(k)) return;
         if (breaker.getUniqueId() != null) bedBreakersThisRound.put(k, breaker.getUniqueId());
         award(breaker, configuredPoints("points.bed", 3), false);
@@ -285,7 +286,7 @@ public final class TournamentManager {
         if (!active || round < 1) return;
         for (TeamData team : teams.values()) {
             if (team.bedwarsTeam == null) continue;
-            String k = roundKey(team.bedwarsTeam);
+            String k = BedwarsTeamResolver.key(team.bedwarsTeam);
             if (k != null && !bedsDestroyedThisRound.contains(k)) {
                 team.points = saturatedAdd(team.points, configuredPoints("points.bed-survived", 2));
             }
@@ -294,7 +295,7 @@ public final class TournamentManager {
     }
 
     public boolean wasBedDestroyed(String bedwarsTeamName) {
-        String k = roundKey(bedwarsTeamName);
+        String k = BedwarsTeamResolver.key(bedwarsTeamName);
         return k != null && bedsDestroyedThisRound.contains(k);
     }
 
@@ -357,7 +358,7 @@ public final class TournamentManager {
 
         if (bedwarsTeamName != null) {
             for (TeamData team : teams.values()) {
-                if (team.bedwarsTeam != null && team.bedwarsTeam.equalsIgnoreCase(bedwarsTeamName)) {
+                if (team.bedwarsTeam != null && BedwarsTeamResolver.same(team.bedwarsTeam, bedwarsTeamName)) {
                     winningTeams.add(team);
                     break;
                 }
