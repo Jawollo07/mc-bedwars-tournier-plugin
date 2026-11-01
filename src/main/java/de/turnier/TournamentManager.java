@@ -188,7 +188,7 @@ public final class TournamentManager {
 
         PlayerData match = null;
         for (PlayerData p : players.values()) {
-            if (!p.name.equalsIgnoreCase(identifier)) continue;
+            if (p.name == null || !p.name.equalsIgnoreCase(identifier)) continue;
             if (match != null) return null; // Ambiguous name: require UUID.
             match = p;
         }
@@ -199,7 +199,7 @@ public final class TournamentManager {
         List<PlayerData> matches = new ArrayList<>();
         if (name == null) return matches;
         for (PlayerData p : players.values()) {
-            if (p.name.equalsIgnoreCase(name)) matches.add(p);
+            if (p.name != null && p.name.equalsIgnoreCase(name)) matches.add(p);
         }
         return matches;
     }
@@ -404,7 +404,7 @@ public final class TournamentManager {
         roundActive = false;
         autoScoring = y.getBoolean("state.auto-scoring", true);
         boardEnabled = y.getBoolean("state.board-enabled", true);
-        round = y.getInt("state.round", 0);
+        round = Math.max(0, Math.min(totalRounds, y.getInt("state.round", 0)));
         totalRounds = Math.max(1, Math.min(100, y.getInt("state.total-rounds", 3)));
         champion = y.getString("state.champion");
         arenaName = y.getString("state.arena");
@@ -430,11 +430,13 @@ public final class TournamentManager {
                 if (s == null) continue;
                 try {
                     UUID id = UUID.fromString(k);
-                    PlayerData d = new PlayerData(id, s.getString("name", k));
+                    String storedName = s.getString("name");
+                    if (storedName == null || storedName.isBlank()) storedName = k;
+                    PlayerData d = new PlayerData(id, storedName);
                     d.team = s.getString("team");
-                    d.points = s.getInt("points");
-                    d.kills = s.getInt("kills");
-                    d.beds = s.getInt("beds");
+                    d.points = num(s.get("points"));
+                    d.kills = num(s.get("kills"));
+                    d.beds = num(s.get("beds"));
                     players.put(id, d);
                 } catch (IllegalArgumentException ignored) {
                     plugin.getLogger().warning("Ungültige UUID in data.yml: " + k);
@@ -503,7 +505,9 @@ public final class TournamentManager {
         }
     }
 
-    private static int num(Object o) {
-        return o instanceof Number n ? n.intValue() : 0;
+    static int num(Object o) {
+        if (!(o instanceof Number n)) return 0;
+        long value = n.longValue();
+        return (int) Math.max(0L, Math.min((long) Integer.MAX_VALUE, value));
     }
 }

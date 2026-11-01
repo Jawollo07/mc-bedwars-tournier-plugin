@@ -25,4 +25,20 @@ class TournamentManagerTest {
     void acceptsZeroPointAward() {
         assertEquals(7, TournamentManager.saturatedAdd(7, 0));
     }
+    @Test
+    void clampsNegativePersistedValuesToZero() {
+        assertEquals(0, TournamentManager.num(-25));
+    }
+
+    @Test
+    void saturatesPersistedValuesAboveIntegerMaximum() {
+        assertEquals(Integer.MAX_VALUE, TournamentManager.num(Long.MAX_VALUE));
+    }
+
+    @Test
+    void treatsMissingOrNonNumericPersistedValuesAsZero() {
+        assertEquals(0, TournamentManager.num(null));
+        assertEquals(0, TournamentManager.num("not-a-number"));
+    }
+
 }
