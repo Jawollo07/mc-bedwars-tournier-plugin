@@ -64,13 +64,7 @@ public final class TridentService implements Listener {
             }
         }
 
-        if (existing != null) {
-            if (isTournamentTrident(inventory.getItemInOffHand())) {
-                // The offhand is included in getContents on supported Paper versions.
-                // No additional copy is needed.
-            }
-            return;
-        }
+        if (existing != null) return;
 
         ItemStack trident = createTrident();
         Map<Integer, ItemStack> leftovers = inventory.addItem(trident);
@@ -126,7 +120,7 @@ public final class TridentService implements Listener {
         Player player = event.getPlayer();
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (player.isOnline() && isParticipant(player)) give(player);
-        }, 1L);
+        }, 2L);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
