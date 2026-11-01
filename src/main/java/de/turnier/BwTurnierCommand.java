@@ -187,7 +187,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 continue;
             }
 
-            Team bedwarsTeam = Team.getByName(tournamentTeam.bedwarsTeam);
+            Team bedwarsTeam = BedwarsTeamResolver.resolve(tournamentTeam.bedwarsTeam);
             if (bedwarsTeam == null) {
                 failures.add(player.getName() + " [" + data.id + "]: MBedwars-Teamfarbe '"
                         + tournamentTeam.bedwarsTeam + "' ist ungültig.");
@@ -199,7 +199,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 continue;
             }
 
-            String mappedKey = bedwarsTeam.getConfigName().toLowerCase(Locale.ROOT);
+            String mappedKey = bedwarsTeam.name().toLowerCase(Locale.ROOT);
             String previousTeam = mappedNames.putIfAbsent(mappedKey, tournamentTeam.name);
             if (previousTeam != null && !previousTeam.equalsIgnoreCase(tournamentTeam.name)) {
                 failures.add("Mapping-Konflikt: Turnierteams '" + previousTeam + "' und '"
