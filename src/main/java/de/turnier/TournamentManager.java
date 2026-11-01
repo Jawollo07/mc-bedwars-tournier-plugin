@@ -420,6 +420,8 @@ public final class TournamentManager {
             t.bedsDestroyed = num(raw.get("beds-destroyed"));
             Object bedwarsTeam = raw.get("bedwars-team");
             t.bedwarsTeam = bedwarsTeam == null ? null : String.valueOf(bedwarsTeam);
+            Team resolvedBedwarsTeam = BedwarsTeamResolver.resolve(t.bedwarsTeam);
+            if (resolvedBedwarsTeam != null) t.bedwarsTeam = resolvedBedwarsTeam.name();
             teams.put(key(t.name), t);
         }
 
