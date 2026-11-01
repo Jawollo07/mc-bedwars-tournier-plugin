@@ -261,7 +261,7 @@ public final class TournamentManager {
         int placement = eliminatedThisRound.size() == 1 ? 3 : eliminatedThisRound.size() == 2 ? 2 : 0;
         if (placement > 0) awardPlacement(bedwarsTeamName, placement);
 
-        String bedKey = roundKey(bedwarsTeamName);
+        String bedKey = BedwarsTeamResolver.key(bedwarsTeamName);
         UUID bedBreaker = bedKey == null ? null : bedBreakersThisRound.get(bedKey);
         if (bedKey != null && bedsDestroyedThisRound.contains(bedKey) && causingPlayer != null
                 && !causingPlayer.getUniqueId().equals(bedBreaker)) {
