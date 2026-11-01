@@ -306,8 +306,8 @@ public final class TurnierCommand implements TabExecutor {
             t.points = apply(op, t.points, pts);
             plugin.msg(s, "&aTeam &e" + t.name + " &ahat jetzt &6" + t.points + " Punkte.");
         } else {
-            PlayerData p = m.findPlayer(a[2]);
-            if (p == null) { plugin.msg(s, "&cSpieler nicht gefunden."); return; }
+            PlayerData p = resolvePlayer(s, a[2]);
+            if (p == null) return;
             p.points = apply(op, p.points, pts);
             plugin.msg(s, "&aSpieler &e" + p.name + " &ahat jetzt &6" + p.points + " Punkte.");
         }
@@ -418,7 +418,13 @@ public final class TurnierCommand implements TabExecutor {
 
     private List<String> playerNames() {
         List<String> list = new ArrayList<>();
-        for (PlayerData p : m.allPlayers()) list.add(p.name);
+        for (PlayerData p : m.allPlayers()) {
+            if (m.findPlayersByName(p.name).size() > 1) {
+                list.add(p.id.toString());
+            } else {
+                list.add(p.name);
+            }
+        }
         return list;
     }
 }
