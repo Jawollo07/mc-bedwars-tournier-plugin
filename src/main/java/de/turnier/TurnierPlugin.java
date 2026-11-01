@@ -19,6 +19,7 @@ public final class TurnierPlugin extends JavaPlugin {
 
     private TournamentManager manager;
     private ScoreboardService scoreboards;
+    private TridentService tridents;
     private TurnierBedwarsAddon bedwarsAddon;
 
     @Override
@@ -29,7 +30,9 @@ public final class TurnierPlugin extends JavaPlugin {
         manager.load();
 
         scoreboards = new ScoreboardService(this, manager);
+        tridents = new TridentService(this, manager);
         getServer().getPluginManager().registerEvents(new PlayerListener(this, manager, scoreboards), this);
+        getServer().getPluginManager().registerEvents(tridents, this);
 
         register("turnier", new TurnierCommand(this, manager));
         register("bwturnier", new BwTurnierCommand(this, manager));
@@ -96,6 +99,10 @@ public final class TurnierPlugin extends JavaPlugin {
 
     public TournamentManager manager() {
         return manager;
+    }
+
+    public TridentService tridents() {
+        return tridents;
     }
 
     /** Wandelt &-Farbcodes in eine Component um. */

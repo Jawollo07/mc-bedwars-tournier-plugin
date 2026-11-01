@@ -23,7 +23,13 @@ public final class PlayerListener implements Listener {
         var player = e.getPlayer();
         manager.register(player);
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-            if (player.isOnline()) scoreboards.update(player);
+            if (player.isOnline()) {
+                scoreboards.update(player);
+                if (manager.isActive() && manager.isRoundActive()) {
+                    TournamentManager.PlayerData data = manager.get(player.getUniqueId());
+                    if (data != null && data.team != null && !data.team.isBlank()) plugin.tridents().give(player);
+                }
+            }
         }, 2L);
     }
 

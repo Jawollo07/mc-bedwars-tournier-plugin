@@ -154,6 +154,7 @@ public final class BwTurnierCommand implements TabExecutor {
         Map<String, String> mappedNames = new java.util.HashMap<>();
         List<String> failures = new ArrayList<>();
         int assigned = 0;
+        List<Player> assignedPlayers = new ArrayList<>();
         int offline = 0;
         int skippedUnassigned = 0;
 
@@ -211,6 +212,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 if (currentArena == arena) {
                     if (arena.moveToTeamDuringLobby(player, bedwarsTeam)) {
                         assigned++;
+                        assignedPlayers.add(player);
                         joinedByTeam.merge(teamKey, 1, Integer::sum);
                         debugLog("Spieler umgeteilt: " + player.getName() + " [" + data.id + "] -> "
                                 + tournamentTeam.name + " / " + bedwarsTeam.getConfigName());
@@ -225,6 +227,7 @@ public final class BwTurnierCommand implements TabExecutor {
                     var issue = arena.addPlayer(player, bedwarsTeam, AddPlayerCause.PLUGIN);
                     if (issue == null) {
                         assigned++;
+                        assignedPlayers.add(player);
                         joinedByTeam.merge(teamKey, 1, Integer::sum);
                         debugLog("Spieler hinzugefügt: " + player.getName() + " [" + data.id + "] -> "
                                 + tournamentTeam.name + " / " + bedwarsTeam.getConfigName());
@@ -285,6 +288,9 @@ public final class BwTurnierCommand implements TabExecutor {
         m.beginRoundScoring();
         m.setRound(m.getRound() + 1);
         m.setRoundActive(true);
+        for (Player player : assignedPlayers) {
+            plugin.tridents().give(player);
+        }
         m.save();
         debugLog("Runde erfolgreich gestartet: round=" + m.getRound() + ", players=" + assigned);
         plugin.broadcastPrefixed("&6Runde " + m.getRound() + "/" + m.getTotalRounds()
