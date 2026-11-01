@@ -169,7 +169,7 @@ public final class TurnierCommand implements TabExecutor {
                 TeamData t = m.findTeam(a[2]);
                 if (t == null) { plugin.msg(s, "&cTeam nicht gefunden."); return; }
                 List<PlayerData> members = m.membersOf(t);
-                int kills = 0, beds = 0;
+                long kills = 0, beds = 0;
                 for (PlayerData p : members) { kills += p.kills; beds += p.beds; }
                 TurnierPlugin.raw(s, "&8&m---------- &6Team " + t.name + " &8&m----------");
                 TurnierPlugin.raw(s, "&7Punkte: &e" + t.points);
