@@ -172,12 +172,36 @@ public final class TournamentManager {
         return players.get(id);
     }
 
-    /** Sucht einen bekannten Spieler (mindestens einmal gejoint) nach Namen. */
-    public PlayerData findPlayer(String name) {
-        for (PlayerData p : players.values()) {
-            if (p.name.equalsIgnoreCase(name)) return p;
+    /**
+     * Resolves a player by UUID or by an unambiguous current/stored name.
+     * Names are deliberately not treated as unique: offline-mode servers and
+     * imported data can contain multiple UUIDs with the same display name.
+     */
+    public PlayerData findPlayer(String identifier) {
+        if (identifier == null || identifier.isBlank()) return null;
+        try {
+            PlayerData byId = players.get(UUID.fromString(identifier));
+            if (byId != null) return byId;
+        } catch (IllegalArgumentException ignored) {
+            // Not a UUID; resolve by name below.
         }
-        return null;
+
+        PlayerData match = null;
+        for (PlayerData p : players.values()) {
+            if (!p.name.equalsIgnoreCase(identifier)) continue;
+            if (match != null) return null; // Ambiguous name: require UUID.
+            match = p;
+        }
+        return match;
+    }
+
+    public List<PlayerData> findPlayersByName(String name) {
+        List<PlayerData> matches = new ArrayList<>();
+        if (name == null) return matches;
+        for (PlayerData p : players.values()) {
+            if (p.name.equalsIgnoreCase(name)) matches.add(p);
+        }
+        return matches;
     }
 
     public Collection<PlayerData> allPlayers() {
