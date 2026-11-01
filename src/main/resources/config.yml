@@ -23,3 +23,7 @@ points:
 # Gewertet wird nur, wenn: Turnier gestartet, Runde läuft und /bwturnier on aktiv ist.
 mbedwars:
   enabled: true
+
+# Ausführliche Zuordnungs- und Rundenstartdiagnose in der Serverkonsole
+# Alternativ zur Laufzeit: /bwturnier debug on|off
+debug: false
