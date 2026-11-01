@@ -105,6 +105,10 @@ public final class TurnierPlugin extends JavaPlugin {
         return tridents;
     }
 
+    public ScoreboardService scoreboards() {
+        return scoreboards;
+    }
+
     /** Wandelt &-Farbcodes in eine Component um. */
     public static Component color(String text) {
         return LEGACY.deserialize(text);
