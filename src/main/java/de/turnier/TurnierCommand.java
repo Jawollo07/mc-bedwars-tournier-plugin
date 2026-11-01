@@ -116,16 +116,16 @@ public final class TurnierCommand implements TabExecutor {
                 if (a.length < 4) { plugin.msg(s, "&c/turnier team bind <Turnierteam> <MBedwars-Farbe>"); return; }
                 TeamData t = m.findTeam(a[2]);
                 if (t == null) { plugin.msg(s, "&cTurnierteam nicht gefunden."); return; }
-                Team bedwarsTeam = Team.getByName(a[3]);
+                Team bedwarsTeam = BedwarsTeamResolver.resolve(a[3]);
                 if (bedwarsTeam == null) { plugin.msg(s, "&cUnbekannte MBedwars-Teamfarbe."); return; }
                 for (TeamData other : m.teams()) {
                     if (other != t && other.bedwarsTeam != null
-                            && other.bedwarsTeam.equalsIgnoreCase(bedwarsTeam.getConfigName())) {
+                            && BedwarsTeamResolver.same(other.bedwarsTeam, bedwarsTeam)) {
                         plugin.msg(s, "&cDiese MBedwars-Farbe ist bereits dem Turnierteam &e" + other.name + " &czugeordnet.");
                         return;
                     }
                 }
-                t.bedwarsTeam = bedwarsTeam.getConfigName();
+                t.bedwarsTeam = bedwarsTeam.name();
                 plugin.msg(s, "&aTurnierteam &e" + t.name + " &aist jetzt mit MBedwars-Team &e" + t.bedwarsTeam + " &averknüpft.");
             }
             case "create" -> {
