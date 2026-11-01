@@ -11,6 +11,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.inventory.ItemStack;
@@ -50,13 +51,11 @@ public final class TridentService implements Listener {
 
         PlayerInventory inventory = player.getInventory();
         ItemStack existing = null;
-        int existingCount = 0;
         ItemStack[] contents = inventory.getContents();
 
         for (int slot = 0; slot < contents.length; slot++) {
             ItemStack item = contents[slot];
             if (!isTournamentTrident(item)) continue;
-            existingCount++;
             if (existing == null) {
                 existing = item;
                 repair(existing);
@@ -138,8 +137,10 @@ public final class TridentService implements Listener {
         boolean protectedCursor = isTournamentTrident(event.getCursor());
         boolean protectedHotbar = event.getHotbarButton() >= 0
                 && isTournamentTrident(player.getInventory().getItem(event.getHotbarButton()));
+        boolean protectedOffhandSwap = event.getClick() == ClickType.SWAP_OFFHAND
+                && isTournamentTrident(player.getInventory().getItemInOffHand());
 
-        if (protectedCurrent || protectedCursor || protectedHotbar) {
+        if (protectedCurrent || protectedCursor || protectedHotbar || protectedOffhandSwap) {
             event.setCancelled(true);
         }
     }
