@@ -43,6 +43,16 @@ public final class BwTurnierCommand implements TabExecutor {
                 m.setAutoScoring(false);
                 plugin.msg(s, "&cAutomatische Wertung deaktiviert.");
             }
+            case "debug" -> {
+                if (a.length < 2 || !(a[1].equalsIgnoreCase("on") || a[1].equalsIgnoreCase("off"))) {
+                    plugin.msg(s, "&eDebug-Modus: &6/bwturnier debug <on|off>");
+                    return true;
+                }
+                boolean enabled = a[1].equalsIgnoreCase("on");
+                plugin.getConfig().set("debug", enabled);
+                plugin.saveConfig();
+                plugin.msg(s, enabled ? "&aDebug-Logging aktiviert." : "&eDebug-Logging deaktiviert.");
+            }
             case "status" -> {
                 plugin.msg(s, "&7Turnier aktiv: &e" + m.isActive());
                 plugin.msg(s, "&7Automatische Wertung: &e" + m.isAutoScoring());
@@ -120,44 +130,170 @@ public final class BwTurnierCommand implements TabExecutor {
             plugin.msg(s, "&cMBedwars ist nicht geladen."); return;
         }
         if (m.getArenaName() == null) { plugin.msg(s, "&cSetze zuerst /turnier arena <Arena>."); return; }
-        Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+
+        final Arena arena;
+        try {
+            arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+        } catch (RuntimeException ex) {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                    "[Turnier] MBedwars-Arena konnte nicht abgefragt werden.", ex);
+            plugin.msg(s, "&cFehler beim Abrufen der MBedwars-Arena. Details stehen in der Konsole.");
+            return;
+        }
         if (arena == null) { plugin.msg(s, "&cArena nicht gefunden: &e" + m.getArenaName()); return; }
         if (arena.getStatus() != ArenaStatus.LOBBY) {
             plugin.msg(s, "&cDie Arena muss in der Lobby sein. Status: &e" + arena.getStatus()); return;
         }
 
+        debugLog("Starte Vorbereitung: arena=" + arena.getName() + ", tournamentRound="
+                + (m.getRound() + 1) + "/" + m.getTotalRounds());
+
+        Map<String, Integer> onlineByTeam = new java.util.LinkedHashMap<>();
+        Map<String, Integer> joinedByTeam = new java.util.LinkedHashMap<>();
+        Map<String, String> mappedNames = new java.util.HashMap<>();
+        List<String> failures = new ArrayList<>();
         int assigned = 0;
-        int failed = 0;
+        int offline = 0;
+        int skippedUnassigned = 0;
+
         for (PlayerData data : m.allPlayers()) {
-            if (data.team == null) continue;
-            Player player = Bukkit.getPlayer(data.id);
-            if (player == null) { failed++; continue; }
+            if (data.team == null || data.team.isBlank()) {
+                skippedUnassigned++;
+                continue;
+            }
+
             TeamData tournamentTeam = m.findTeam(data.team);
-            Team bedwarsTeam = tournamentTeam == null || tournamentTeam.bedwarsTeam == null
-                    ? null : Team.getByName(tournamentTeam.bedwarsTeam);
-            if (bedwarsTeam == null || !arena.isTeamEnabled(bedwarsTeam)) { failed++; continue; }
-            if (BedwarsAPI.getGameAPI().getArenaByPlayer(player) == arena) {
-                if (arena.moveToTeamDuringLobby(player, bedwarsTeam)) assigned++; else failed++;
-            } else {
-                var issue = arena.addPlayer(player, bedwarsTeam, AddPlayerCause.PLUGIN);
-                if (issue == null) assigned++; else failed++;
+            if (tournamentTeam == null) {
+                failures.add(data.name + " [" + data.id + "]: Turnierteam '" + data.team + "' existiert nicht mehr.");
+                continue;
+            }
+
+            Player player = Bukkit.getPlayer(data.id);
+            if (player == null) {
+                offline++;
+                debugLog("Spieler offline/UUID nicht online: name=" + data.name + ", uuid=" + data.id
+                        + ", tournamentTeam=" + tournamentTeam.name);
+                continue;
+            }
+
+            String teamKey = tournamentTeam.name.toLowerCase(Locale.ROOT);
+            onlineByTeam.merge(teamKey, 1, Integer::sum);
+
+            if (tournamentTeam.bedwarsTeam == null || tournamentTeam.bedwarsTeam.isBlank()) {
+                failures.add(player.getName() + " [" + data.id + "]: Für Turnierteam '"
+                        + tournamentTeam.name + "' ist keine MBedwars-Teamfarbe konfiguriert.");
+                continue;
+            }
+
+            Team bedwarsTeam = Team.getByName(tournamentTeam.bedwarsTeam);
+            if (bedwarsTeam == null) {
+                failures.add(player.getName() + " [" + data.id + "]: MBedwars-Teamfarbe '"
+                        + tournamentTeam.bedwarsTeam + "' ist ungültig.");
+                continue;
+            }
+            if (!arena.isTeamEnabled(bedwarsTeam)) {
+                failures.add(player.getName() + " [" + data.id + "]: MBedwars-Team '"
+                        + bedwarsTeam.getConfigName() + "' ist in Arena '" + arena.getName() + "' deaktiviert.");
+                continue;
+            }
+
+            String mappedKey = bedwarsTeam.getConfigName().toLowerCase(Locale.ROOT);
+            String previousTeam = mappedNames.putIfAbsent(mappedKey, tournamentTeam.name);
+            if (previousTeam != null && !previousTeam.equalsIgnoreCase(tournamentTeam.name)) {
+                failures.add("Mapping-Konflikt: Turnierteams '" + previousTeam + "' und '"
+                        + tournamentTeam.name + "' verwenden beide MBedwars-Team '" + bedwarsTeam.getConfigName() + "'.");
+                continue;
+            }
+
+            try {
+                Arena currentArena = BedwarsAPI.getGameAPI().getArenaByPlayer(player);
+                if (currentArena == arena) {
+                    if (arena.moveToTeamDuringLobby(player, bedwarsTeam)) {
+                        assigned++;
+                        joinedByTeam.merge(teamKey, 1, Integer::sum);
+                        debugLog("Spieler umgeteilt: " + player.getName() + " [" + data.id + "] -> "
+                                + tournamentTeam.name + " / " + bedwarsTeam.getConfigName());
+                    } else {
+                        failures.add(player.getName() + " [" + data.id + "]: MBedwars konnte den Spieler in der Lobby nicht in Team '"
+                                + bedwarsTeam.getConfigName() + "' verschieben.");
+                    }
+                } else if (currentArena != null) {
+                    failures.add(player.getName() + " [" + data.id + "]: Spieler befindet sich bereits in einer anderen MBedwars-Arena '"
+                            + currentArena.getName() + "'.");
+                } else {
+                    var issue = arena.addPlayer(player, bedwarsTeam, AddPlayerCause.PLUGIN);
+                    if (issue == null) {
+                        assigned++;
+                        joinedByTeam.merge(teamKey, 1, Integer::sum);
+                        debugLog("Spieler hinzugefügt: " + player.getName() + " [" + data.id + "] -> "
+                                + tournamentTeam.name + " / " + bedwarsTeam.getConfigName());
+                    } else {
+                        failures.add(player.getName() + " [" + data.id + "]: MBedwars addPlayer lehnte den Beitritt ab: "
+                                + issue + ".");
+                    }
+                }
+            } catch (RuntimeException ex) {
+                failures.add(player.getName() + " [" + data.id + "]: Ausnahme beim MBedwars-Beitritt: "
+                        + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+                plugin.getLogger().log(java.util.logging.Level.WARNING,
+                        "[Turnier] Fehler beim Zuordnen von " + player.getName() + " [" + data.id + "]", ex);
             }
         }
-        if (assigned == 0 || failed > 0) {
-            plugin.msg(s, "&cRunde nicht gestartet. Zugeordnet: &e" + assigned + " &8| &cFehler: &e" + failed);
-            plugin.msg(s, "&7Prüfe Online-Status, Teamfarben und freie Arena-Plätze."); return;
+
+        List<String> teamsWithoutPlayers = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : onlineByTeam.entrySet()) {
+            if (joinedByTeam.getOrDefault(entry.getKey(), 0) == 0) {
+                teamsWithoutPlayers.add(entry.getKey());
+            }
         }
+        long participatingTeams = joinedByTeam.values().stream().filter(count -> count > 0).count();
+
+        debugLog("Zuordnungsübersicht: erfolgreich=" + assigned + ", offline=" + offline
+                + ", ohneTurnierteam=" + skippedUnassigned + ", onlineTeams=" + onlineByTeam.size()
+                + ", erfolgreicheTeams=" + participatingTeams + ", fehler=" + failures.size());
+
+        for (String failure : failures) {
+            plugin.getLogger().warning("[Turnier] Zuordnungsproblem: " + failure);
+        }
+
+        if (assigned == 0 || participatingTeams < 2 || !teamsWithoutPlayers.isEmpty()) {
+            plugin.getLogger().warning("[Turnier] Rundenstart abgebrochen: Es müssen mindestens zwei Turnierteams"
+                    + " Spieler erfolgreich in die Arena bringen; jedes Team mit Online-Spielern braucht mindestens"
+                    + " einen erfolgreichen Beitritt. Erfolgreich=" + assigned + ", Teams=" + participatingTeams
+                    + ", Teams ohne Spieler=" + teamsWithoutPlayers);
+            plugin.msg(s, "&cRunde nicht gestartet. Erfolgreich zugeordnet: &e" + assigned
+                    + " &7| Teams: &e" + participatingTeams + " &7| Offline: &e" + offline);
+            plugin.msg(s, "&7Details und konkrete Fehlerursachen stehen in der Serverkonsole.");
+            return;
+        }
+
+        if (!failures.isEmpty() || offline > 0 || skippedUnassigned > 0) {
+            plugin.msg(s, "&eHinweis: " + failures.size() + " Zuordnungsproblem(e), " + offline
+                    + " offline. Die Runde startet mit den erfolgreich zugeordneten Spielern.");
+        }
+
         try {
             arena.setStatus(ArenaStatus.RUNNING);
-        } catch (IllegalStateException ex) {
-            plugin.msg(s, "&cMBedwars konnte die Runde nicht starten: &f" + ex.getMessage()); return;
+        } catch (RuntimeException ex) {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE,
+                    "[Turnier] MBedwars konnte Arena '" + arena.getName() + "' nicht starten.", ex);
+            plugin.msg(s, "&cMBedwars konnte die Runde nicht starten. Details stehen in der Konsole.");
+            return;
         }
+
         m.beginRoundScoring();
         m.setRound(m.getRound() + 1);
         m.setRoundActive(true);
         m.save();
+        debugLog("Runde erfolgreich gestartet: round=" + m.getRound() + ", players=" + assigned);
         plugin.broadcastPrefixed("&6Runde " + m.getRound() + "/" + m.getTotalRounds()
                 + " &awurde gestartet! &7Arena: &e" + arena.getName() + " &8| &7Spieler: &e" + assigned);
+    }
+
+    private void debugLog(String message) {
+        if (plugin.getConfig().getBoolean("debug", false)) {
+            plugin.getLogger().info("[Turnier-Debug] " + message);
+        }
     }
 
     private void pause(CommandSender s) {
@@ -239,7 +375,7 @@ public final class BwTurnierCommand implements TabExecutor {
     public List<String> onTabComplete(CommandSender s, Command c, String label, String[] a) {
         if (a.length == 1) {
             return TurnierPlugin.complete(List.of("start", "next", "round", "pause", "roundend", "finish",
-                    "ceremony", "siegerehrung", "announce", "stats", "win", "on", "off", "status"), a[0]);
+                    "ceremony", "siegerehrung", "announce", "stats", "win", "on", "off", "debug", "status"), a[0]);
         }
         if (a.length == 2 && a[0].equalsIgnoreCase("start")) {
             return TurnierPlugin.complete(List.of("1", "2", "3", "4", "5"), a[1]);
