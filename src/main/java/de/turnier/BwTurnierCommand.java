@@ -68,7 +68,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 if (a.length < 2) { plugin.msg(s, "&c/bwturnier stats <Team>"); return true; }
                 TeamData t = m.findTeam(a[1]);
                 if (t == null) { plugin.msg(s, "&cTeam nicht gefunden."); return true; }
-                int kills = 0, beds = 0;
+                long kills = 0, beds = 0;
                 for (PlayerData p : m.membersOf(t)) { kills += p.kills; beds += p.beds; }
                 TurnierPlugin.raw(s, "&8&m---------- &6Statistik " + t.name + " &8&m----------");
                 TurnierPlugin.raw(s, "&7Punkte: &e" + t.points);
