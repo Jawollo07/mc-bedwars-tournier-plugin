@@ -188,7 +188,7 @@ public final class TournamentManager {
 
         PlayerData match = null;
         for (PlayerData p : players.values()) {
-            if (!p.name.equalsIgnoreCase(identifier)) continue;
+            if (p.name == null || !p.name.equalsIgnoreCase(identifier)) continue;
             if (match != null) return null; // Ambiguous name: require UUID.
             match = p;
         }
@@ -199,7 +199,7 @@ public final class TournamentManager {
         List<PlayerData> matches = new ArrayList<>();
         if (name == null) return matches;
         for (PlayerData p : players.values()) {
-            if (p.name.equalsIgnoreCase(name)) matches.add(p);
+            if (p.name != null && p.name.equalsIgnoreCase(name)) matches.add(p);
         }
         return matches;
     }
@@ -430,7 +430,9 @@ public final class TournamentManager {
                 if (s == null) continue;
                 try {
                     UUID id = UUID.fromString(k);
-                    PlayerData d = new PlayerData(id, s.getString("name", k));
+                    String storedName = s.getString("name");
+                    if (storedName == null || storedName.isBlank()) storedName = k;
+                    PlayerData d = new PlayerData(id, storedName);
                     d.team = s.getString("team");
                     d.points = num(s.get("points"));
                     d.kills = num(s.get("kills"));
