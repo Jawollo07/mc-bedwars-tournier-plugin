@@ -111,7 +111,7 @@ public final class BwTurnierCommand implements TabExecutor {
             catch (NumberFormatException ex) { plugin.msg(s, "&cVerwendung: /bwturnier start [AnzahlRunden]"); return; }
         }
         if (rounds < 1 || rounds > 100) { plugin.msg(s, "&cDie Rundenzahl muss zwischen 1 und 100 liegen."); return; }
-        if (m.teams().isEmpty()) { plugin.msg(s, "&cErstelle zuerst mindestens ein Turnierteam."); return; }
+        if (m.teams().size() < 2) { plugin.msg(s, "&cFür ein BedWars-Turnier müssen mindestens zwei Turnierteams existieren."); return; }
         m.setActive(true);
         m.setRound(0);
         m.setTotalRounds(rounds);
@@ -300,11 +300,26 @@ public final class BwTurnierCommand implements TabExecutor {
     private void pause(CommandSender s) {
         if (!m.isActive()) { plugin.msg(s, "&cEs läuft kein Turnier."); return; }
         if (m.isRoundActive()) {
-            if (Bukkit.getPluginManager().getPlugin("MBedwars") != null && m.getArenaName() != null) {
-                Arena arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
-                if (arena != null && arena.getStatus() == ArenaStatus.RUNNING) {
-                    plugin.msg(s, "&cDie Runde läuft noch. Beende zuerst das MBedwars-Match."); return;
-                }
+            if (Bukkit.getPluginManager().getPlugin("MBedwars") == null || m.getArenaName() == null) {
+                plugin.msg(s, "&cDer Status der laufenden MBedwars-Runde kann nicht sicher geprüft werden. Die Runde bleibt aktiv.");
+                return;
+            }
+            final Arena arena;
+            try {
+                arena = BedwarsAPI.getGameAPI().getArenaByExactName(m.getArenaName());
+            } catch (RuntimeException ex) {
+                plugin.getLogger().log(java.util.logging.Level.WARNING,
+                        "[Turnier] Arena-Status konnte vor der Pause nicht geprüft werden.", ex);
+                plugin.msg(s, "&cArena-Status konnte nicht geprüft werden. Die Runde bleibt aktiv.");
+                return;
+            }
+            if (arena == null) {
+                plugin.msg(s, "&cDie konfigurierte Turnierarena wurde nicht gefunden. Die Runde bleibt aktiv.");
+                return;
+            }
+            if (arena.getStatus() == ArenaStatus.RUNNING) {
+                plugin.msg(s, "&cDie Runde läuft noch. Beende zuerst das MBedwars-Match.");
+                return;
             }
             m.setRoundActive(false);
             m.save();
