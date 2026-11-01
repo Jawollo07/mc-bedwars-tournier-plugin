@@ -16,6 +16,7 @@ import org.bukkit.command.TabExecutor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public final class BwTurnierCommand implements TabExecutor {
 
