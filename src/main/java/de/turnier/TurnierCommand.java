@@ -251,25 +251,22 @@ public final class TurnierCommand implements TabExecutor {
                 if (a.length < 4) { plugin.msg(s, "&c/turnier spieler assign <Spieler> <Team>"); return; }
                 TeamData t = m.findTeam(a[3]);
                 if (t == null) { plugin.msg(s, "&cDieses Turnierteam existiert nicht."); return; }
-                PlayerData p = m.findPlayer(a[2]);
-                if (p == null) {
-                    plugin.msg(s, "&cSpieler unbekannt. Er muss den Server mindestens einmal betreten haben.");
-                    return;
-                }
+                PlayerData p = resolvePlayer(s, a[2]);
+                if (p == null) return;
                 p.team = t.name;
                 plugin.msg(s, "&a" + p.name + " wurde Team &e" + t.name + " &azugeteilt.");
             }
             case "remove" -> {
                 if (a.length < 3) { plugin.msg(s, "&c/turnier spieler remove <Spieler>"); return; }
-                PlayerData p = m.findPlayer(a[2]);
-                if (p == null) { plugin.msg(s, "&cSpieler nicht gefunden."); return; }
+                PlayerData p = resolvePlayer(s, a[2]);
+                if (p == null) return;
                 p.team = null;
                 plugin.msg(s, "&a" + p.name + " wurde aus seinem Team entfernt.");
             }
             case "info" -> {
                 if (a.length < 3) { plugin.msg(s, "&c/turnier spieler info <Spieler>"); return; }
-                PlayerData p = m.findPlayer(a[2]);
-                if (p == null) { plugin.msg(s, "&cSpieler nicht gefunden."); return; }
+                PlayerData p = resolvePlayer(s, a[2]);
+                if (p == null) return;
                 TurnierPlugin.raw(s, "&8&m---------- &6Spieler " + p.name + " &8&m----------");
                 TurnierPlugin.raw(s, "&7Persönliche Punkte: &e" + p.points);
                 TurnierPlugin.raw(s, "&7Turnierteam: " + (p.team != null ? "&e" + p.team : "&cKeinem Team zugeordnet"));
@@ -395,6 +392,22 @@ public final class TurnierCommand implements TabExecutor {
             default -> { }
         }
         return List.of();
+    }
+
+    private PlayerData resolvePlayer(CommandSender sender, String identifier) {
+        List<PlayerData> matches = m.findPlayersByName(identifier);
+        if (matches.size() > 1) {
+            plugin.msg(sender, "&cDer Spielername &e" + identifier + " &cist nicht eindeutig. Verwende stattdessen eine UUID:");
+            for (PlayerData match : matches) {
+                plugin.msg(sender, "&7- &f" + match.name + " &8(" + match.id + ")");
+            }
+            return null;
+        }
+        PlayerData player = m.findPlayer(identifier);
+        if (player == null) {
+            plugin.msg(sender, "&cSpieler nicht gefunden. Verwende einen Spielernamen oder eine UUID.");
+        }
+        return player;
     }
 
     private List<String> teamNames() {
