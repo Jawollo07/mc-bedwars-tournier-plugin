@@ -64,7 +64,7 @@ public final class ScoreboardService {
     }
 
     public void update(Player p) {
-        if (!manager.isBoardEnabled()) {
+        if (!manager.isBoardEnabled() || manager.isRoundActive()) {
             remove(p);
             return;
         }

@@ -288,6 +288,7 @@ public final class BwTurnierCommand implements TabExecutor {
         m.beginRoundScoring();
         m.setRound(m.getRound() + 1);
         m.setRoundActive(true);
+        plugin.scoreboards().refreshAll();
         for (Player player : assignedPlayers) {
             plugin.tridents().give(player);
         }
@@ -328,6 +329,7 @@ public final class BwTurnierCommand implements TabExecutor {
                 return;
             }
             m.setRoundActive(false);
+            plugin.scoreboards().refreshAll();
             m.save();
         }
         plugin.broadcastPrefixed("&eTurnierpause nach Runde &6" + m.getRound() + "&e. Wertung und Statistiken bleiben erhalten.");
@@ -355,6 +357,7 @@ public final class BwTurnierCommand implements TabExecutor {
         }
         m.setActive(false);
         m.setRoundActive(false);
+        plugin.scoreboards().refreshAll();
 
         List<TeamData> sorted = m.sortedTeams();
         if (sorted.isEmpty()) {
