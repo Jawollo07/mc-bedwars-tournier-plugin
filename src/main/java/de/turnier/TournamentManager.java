@@ -404,7 +404,7 @@ public final class TournamentManager {
         roundActive = false;
         autoScoring = y.getBoolean("state.auto-scoring", true);
         boardEnabled = y.getBoolean("state.board-enabled", true);
-        round = y.getInt("state.round", 0);
+        round = Math.max(0, Math.min(totalRounds, y.getInt("state.round", 0)));
         totalRounds = Math.max(1, Math.min(100, y.getInt("state.total-rounds", 3)));
         champion = y.getString("state.champion");
         arenaName = y.getString("state.arena");
@@ -432,9 +432,9 @@ public final class TournamentManager {
                     UUID id = UUID.fromString(k);
                     PlayerData d = new PlayerData(id, s.getString("name", k));
                     d.team = s.getString("team");
-                    d.points = s.getInt("points");
-                    d.kills = s.getInt("kills");
-                    d.beds = s.getInt("beds");
+                    d.points = num(s.get("points"));
+                    d.kills = num(s.get("kills"));
+                    d.beds = num(s.get("beds"));
                     players.put(id, d);
                 } catch (IllegalArgumentException ignored) {
                     plugin.getLogger().warning("Ungültige UUID in data.yml: " + k);
@@ -503,7 +503,9 @@ public final class TournamentManager {
         }
     }
 
-    private static int num(Object o) {
-        return o instanceof Number n ? n.intValue() : 0;
+    static int num(Object o) {
+        if (!(o instanceof Number n)) return 0;
+        long value = n.longValue();
+        return (int) Math.max(0L, Math.min((long) Integer.MAX_VALUE, value));
     }
 }
